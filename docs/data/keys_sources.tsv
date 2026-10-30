@@ -1,0 +1,316 @@
+02P	sub_5403c	0x54d14	putStr	sub_b249c: 'getTxLinkSpeedMbps' | 'getRxLinkSpeedMbps' | '%d,%d'
+0q1	sub_9143c	0x91508	putObj	
+0qI	sub_5403c	0x559a8	putInt	
+0wL	sub_8daf4	0x8db78	putObj	
+1yT	sub_593f0	0x5d508	putStr	sub_af5a0: 'wifi_connected_mac_randomization_enabled'
+2cO	sub_5f5f4	0x60a90	putStr	sub_c67a0: 
+2Lp	sub_5403c	0x55f34	putInt	
+2mV	sub_68f9c	0x79314	putStr	sub_45a78: 
+2us	sub_593f0	0x5bde8	putObj	sub_af8d4: 'development_settings_enabled' | 'usb_mass_storage_enabled'
+2us	sub_8daf4	0x8dc40	putObj	
+3J5	sub_68f9c	0x71b84	putMode(0xa)	sub_a5544: 'android.permission.READ_PHONE_STATE' | 'getImei' | '(I)Ljava/lang/String;' | '()Ljava/lang/String;'
+3k9	sub_68f9c	0x6d310	putInt	
+3k9	sub_7f3f4	0x814ac	putInt	
+3mS	sub_67328	0x679b8	putStr	sub_143a8c: 
+3pD	sub_8daf4	0x8dcec	putObj	
+3q2	sub_5da20	0x5f3e8	putObj	sub_f773c: '<init>' | '(Ljava/lang/String;)V'
+41j	sub_68f9c	0x6a320	putMode(0xa)	sub_4adb4: 
+41j	sub_8a7ac	0x8d140	putMode(0xa)	sub_4adb4: 
+41j	sub_8ddb4	0x8fe48	putMode(0xa)	sub_4adb4: 
+43c	sub_593f0	0x5c2d4	putStr	sub_af284: 'http.proxyHost'
+4VP	sub_56c38	0x58134	putInt	
+4VP	sub_68f9c	0x71548	putInt	
+4VP	sub_8ddb4	0x8ef00	putInt	
+4VP	sub_9143c	0x916b4	putInt	
+52J	sub_640bc	0x65330	putMode(2)	sub_cb304: '/sdcard' | '/system/lib' | '/system/lib64' | '/system/bin' | '/sys/block' | '/vendor/lib' | '/dev/null' | '/dev/block' | '/storage/emulated/0' | '/sy
+52J	sub_68f9c	0x79500	putMode(2)	sub_cb304: '/sdcard' | '/system/lib' | '/system/lib64' | '/system/bin' | '/sys/block' | '/vendor/lib' | '/dev/null' | '/dev/block' | '/storage/emulated/0' | '/sy
+59p	sub_5403c	0x55d64	putObj	sub_b305c: 'getAssociatedMloLinks' | '()Ljava/util/List;' | 'size' | '()I'
+5Nc	sub_640bc	0x66688	putMode(2)	sub_91b84: 'android.intent.action.MAIN' | 'android.intent.category.HOME' | 'android/content/Intent' | 'addCategory' | '(Ljava/lang/String;)Landroid/content/Inten
+5Tv	sub_640bc	0x66c70	putMode(2)	sub_bc404: 
+5Tv	sub_68f9c	0x73c6c	putMode(2)	sub_bc404: 
+6PH	sub_593f0	0x5c62c	putObj	sub_92540: '/proc/net/tcp' | '/proc/net/tcp6' | '/proc/net/udp' | '/proc/net/udp6' | 'getPackageInfo' | 'size' | '()I' | 'I'
+6x6	sub_640bc	0x6691c	putMode(3)	sub_e23c4: 'MD5'
+6yY	sub_514d4	0x51c60	putStr	sub_b6e04: '()V'
+6yY	sub_68f9c	0x78230	putStr	sub_b6e04: '()V'
+75c	sub_68f9c	0x75400	putStr	
+75c	sub_9143c	0x914a4	putStr	
+7Gf	sub_9143c	0x9181c	putStr	
+7Hz	sub_640bc	0x66f7c	putMode(2)	sub_bf204: 
+7S2	sub_5403c	0x55aa0	putObj	sub_b3b6c: 'connectivity' | 'getSystemService' | '(Ljava/lang/String;)Ljava/lang/Object;' | 'getAllNetworks' | '()[Landroid/net/Network;'
+7S2	sub_68f9c	0x6a230	putObj	sub_b3b6c: 'connectivity' | 'getSystemService' | '(Ljava/lang/String;)Ljava/lang/Object;' | 'getAllNetworks' | '()[Landroid/net/Network;'
+7S2	sub_8ddb4	0x8ffd0	putObj	sub_b3b6c: 'connectivity' | 'getSystemService' | '(Ljava/lang/String;)Ljava/lang/Object;' | 'getAllNetworks' | '()[Landroid/net/Network;'
+7S2	sub_9143c	0x917d8	putObj	
+84j	sub_5f5f4	0x5fc48	putInt	
+8ET	sub_593f0	0x5ccd0	putMode(2)	sub_a3250: 'location' | 'getSystemService' | '(Ljava/lang/String;)Ljava/lang/Object;' | 'getGnssHardwareModelName' | '()Ljava/lang/String;'
+8N4	sub_68f9c	0x6d350	putStr	
+8N4	sub_7f3f4	0x80434	putStr	
+9be	sub_50e34	0x51444	putInt	
+9lc	sub_640bc	0x651a4	putMode(2)	sub_c0644: 
+9N2	sub_5403c	0x55e24	putMode(2)	sub_b2a6c: 'getMobileRxBytes' | 'getMobileTxBytes' | '%ld,%ld'
+9P6	sub_5403c	0x56178	putMode(7)	sub_c2740: 'ip neigh' ; sub_db0b0: 
+9pz	sub_593f0	0x5b188	putStr	sub_4ae64: '02:00:00:0k:0f:00' | '%d%s'
+?	sub_514d4	0x51ad4	putMode(2)	
+?	sub_5647c	0x567d8	putObj	
+?	sub_5835c	0x58db0	putMode(0xa)	
+?	sub_62790	0x628a4	putInt	
+?	sub_67328	0x67800	putMode(2)	
+?	sub_67328	0x67a6c	putStr	sub_145600: 
+?	sub_7f3f4	0x80138	putStr	
+?	sub_89970	0x89984	putObj	
+AAA	sub_67328	0x6837c	putStr	sub_145608: 
+aFw	sub_640bc	0x64e6c	putMode(2)	sub_bec78: 
+aFw	sub_68f9c	0x6b980	putMode(2)	sub_bec78: 
+anY	sub_5f5f4	0x601a4	putStr	sub_c6c44: '%ld'
+Aop	sub_5da20	0x5f3c0	putStr	sub_f773c: '<init>' | '(Ljava/lang/String;)V' ; sub_c6520: '/sys/devices/system/cpu/cpu0/cpufreq/cpuinfo_cur_freq'
+awt	sub_8ddb4	0x901ac	putObj	sub_14fb44: 
+B3k	sub_68f9c	0x6ce0c	putInt	
+B7G	sub_68620	0x68678	putObj	
+B7G	sub_7f3f4	0x844d8	putObj	
+B7G	sub_8a7ac	0x8d6c8	putObj	
+BAj	sub_5403c	0x54bf4	putMode(2)	sub_b2738: 
+BBB	sub_67328	0x68008	putStr	sub_145618: 
+bf7	sub_56c38	0x57244	putStr	sub_a6fc0: 'getNetworkOperator' | '()Ljava/lang/String;' | '0'
+bf7	sub_68f9c	0x7827c	putStr	sub_a6fc0: 'getNetworkOperator' | '()Ljava/lang/String;' | '0'
+bf7	sub_8ddb4	0x8fbec	putStr	sub_a6fc0: 'getNetworkOperator' | '()Ljava/lang/String;' | '0'
+bf7	sub_9143c	0x916ec	putStr	
+Blv	sub_56c38	0x58328	putInt	
+Bn2	sub_5403c	0x559cc	putMode(2)	sub_b2b70: 'getTotalRxBytes' | 'getTotalTxBytes' | '%ld,%ld'
+Bos	sub_640bc	0x65e18	putMode(2)	sub_bc8ac: 
+Bos	sub_68f9c	0x76adc	putMode(2)	sub_bc8ac: 
+Bsy	sub_5f5f4	0x60ba8	putInt	
+c2O	sub_593f0	0x5cc18	putStr	sub_af790: 'adb_enabled'
+c2O	sub_8ddb4	0x8f7d0	putStr	sub_af790: 'adb_enabled'
+cgU	sub_5da20	0x5e6d8	putStr	sub_f773c: '<init>' | '(Ljava/lang/String;)V' ; sub_c6500: '/sys/class/thermal/thermal_zone0/temp'
+ciD	sub_8ddb4	0x8fbcc	putObj	sub_14faec: 
+Cl5	sub_628e0	0x634b8	putMode(2)	sub_eb940: 'getApplicationInfo' | '()Landroid/content/pm/ApplicationInfo;' | 'publicSourceDir' | 'Ljava/lang/String;'
+cmP	sub_628e0	0x63c04	putInt	sub_152be0: 
+CnM	sub_593f0	0x5c768	putStr	sub_f2e84: 'getSharedPreferences' | '(Ljava/lang/String;I)Landroid/content/SharedPreferences;' | 'string' | 'boolean' | 'int' | 'getInt' | '(Ljava/lang/String;I) ; sub_f2e84: 'getSharedPreferences' | '(Ljava/lang/String;I)Landroid/content/SharedPreferences;' | 'string' | 'boolean' | 'int' | 'getInt' | '(Ljava/lang/String;I)
+CzO	sub_593f0	0x5d098	putStr	sub_af370: 'http.proxyPort'
+d3a	sub_8ddb4	0x8e514	putStr	
+Db2	sub_68f9c	0x6ac08	putInt	
+Db2	sub_8a7ac	0x8cbcc	putInt	
+Dg1	sub_5403c	0x55bfc	putObj	sub_b4754: 'android.permission.ACCESS_COARSE_LOCATION' | 'android:coarse_location' | 'wifi' | 'getSystemService' | '(Ljava/lang/String;)Ljava/lang/Object;' | 'ge
+dGh	sub_68f9c	0x774e0	putMode(3)	sub_f3274: 'getSharedPreferences' | '(Ljava/lang/String;I)Landroid/content/SharedPreferences;' | 'getString' | '(Ljava/lang/String;Ljava/lang/String;)Ljava/lang/
+dj3	sub_56c38	0x582d4	putMode(0xa)	sub_a6438: 'android.permission.READ_PHONE_STATE' | 'telephony_subscription_service' | 'getSystemService' | '(Ljava/lang/String;)Ljava/lang/Object;' | 'android/te
+dJs	sub_640bc	0x66858	putMode(2)	sub_bb994: '/sys/block/mmcblk0/device/cid'
+dJs	sub_68f9c	0x6e11c	putMode(2)	sub_bb994: '/sys/block/mmcblk0/device/cid'
+dLH	sub_68f9c	0x6d824	putMode(2)	sub_f3274: 'getSharedPreferences' | '(Ljava/lang/String;I)Landroid/content/SharedPreferences;' | 'getString' | '(Ljava/lang/String;Ljava/lang/String;)Ljava/lang/
+dLH	sub_8ddb4	0x8ff40	putMode(2)	sub_f3274: 'getSharedPreferences' | '(Ljava/lang/String;I)Landroid/content/SharedPreferences;' | 'getString' | '(Ljava/lang/String;Ljava/lang/String;)Ljava/lang/
+dN0	sub_12302c	0x123258	putStr	
+DVp	sub_5403c	0x557ac	putMode(2)	sub_b2714: 
+e4U	sub_593f0	0x5cc84	putStr	sub_aefc8: 'mqBRboGZkQPcAkyk'
+eBI	sub_68548	0x685ec	putStr	
+eBI	sub_7f3f4	0x847ac	putStr	
+ED2	sub_5da20	0x5eef0	putMode(2)	sub_c65a0: 'java/util/UUID' | 'randomUUID' | '()Ljava/util/UUID;' | 'toString' | '()Ljava/lang/String;' | '/proc/sys/kernel/random/uuid'
+ED2	sub_9143c	0x91564	putStr	
+eHZ	sub_5da20	0x5eab8	putStr	sub_f773c: '<init>' | '(Ljava/lang/String;)V' ; sub_c6540: '/sys/devices/system/cpu/cpu0/cpufreq/cpuinfo_max_freq'
+EIx	sub_8a7ac	0x8d364	putMode(3)	sub_f3274: 'getSharedPreferences' | '(Ljava/lang/String;I)Landroid/content/SharedPreferences;' | 'getString' | '(Ljava/lang/String;Ljava/lang/String;)Ljava/lang/
+Ell	sub_8a7ac	0x8baac	putStr	sub_ba540: '/ee02ad45'
+EmH	sub_5f5f4	0x60154	putMode(0xa)	sub_c28a0: 
+eTk	sub_628e0	0x63b88	putInt	
+F95	sub_593f0	0x5ca44	putMode(3)	sub_af854: 
+F9K	sub_593f0	0x5acbc	putStr	sub_af004: 'dxCRMxhQkdGePGnp'
+fej	sub_640bc	0x67034	putStr	
+fEs	sub_593f0	0x5a9ac	putMode(3)	sub_af85c: 'op_security_uuid'
+Fi3	sub_593f0	0x5d210	putStr	sub_9214c: 'display' | 'getSystemService' | '(Ljava/lang/String;)Ljava/lang/Object;' | 'getDisplays' | '()[Landroid/view/Display;'
+fM0	sub_68f9c	0x6cb5c	putMode(0xa)	sub_4afb4: 
+foO	sub_56c38	0x57928	putMode(0xa)	sub_4bf54: 
+foO	sub_68f9c	0x6bf5c	putMode(0xa)	sub_4bf54: 
+foO	sub_8ddb4	0x900c4	putMode(0xa)	sub_4bf54: 
+fPV	sub_593f0	0x5c428	putStr	sub_96fc4: 'java/util/Locale' | 'getDefault' | '()Ljava/util/Locale;' | 'getCountry' | 'getLanguage' | '%s,%s'
+fPV	sub_68f9c	0x74dec	putStr	sub_96fc4: 'java/util/Locale' | 'getDefault' | '()Ljava/util/Locale;' | 'getCountry' | 'getLanguage' | '%s,%s'
+fzN	sub_8a7ac	0x8bef8	putStr	sub_f3274: 'getSharedPreferences' | '(Ljava/lang/String;I)Landroid/content/SharedPreferences;' | 'getString' | '(Ljava/lang/String;Ljava/lang/String;)Ljava/lang/
+g5k	sub_5f5f4	0x60c2c	putMode(0xa)	sub_c2808: 
+G8U	sub_640bc	0x64cd0	putObj	sub_b19b4: '/proc/meminfo' | 'MYA' | '%f,%f' | 'H4S'
+G8U	sub_68f9c	0x77074	putObj	sub_b19b4: '/proc/meminfo' | 'MYA' | '%f,%f' | 'H4S'
+G8U	sub_8daf4	0x8dd64	putObj	
+gaR	sub_8a7ac	0x8d3e0	putMode(2)	sub_dc18c: 
+gaR	sub_9143c	0x919d4	putStr	
+gEd	sub_640bc	0x664bc	putStr	sub_bc530: 
+gEd	sub_68f9c	0x719ec	putStr	sub_bc530: 
+go9	sub_593f0	0x5a330	putMode(3)	sub_af808: 'mi_health_id'
+GZY	sub_640bc	0x64ed0	putMode(2)	sub_c0558: '/sys/devices/soc0/serial_number' | 'r'
+GZY	sub_68f9c	0x79918	putMode(2)	sub_c0558: '/sys/devices/soc0/serial_number' | 'r'
+hdw	sub_56c38	0x56e78	putStr	sub_af6a4: 'volte_vt_enabled'
+Hg6	sub_5f5f4	0x5fe28	putMode(2)	sub_c71d4: '/proc/uptime' | '%d-%02d-%02d %02d:%02d:%02d'
+hH1	sub_593f0	0x5b670	putMode(1)	sub_af4cc: 'bluetooth_address'
+I68	sub_593f0	0x5d9a0	putInt	
+I68	sub_8daf4	0x8dbfc	putInt	
+IAI	sub_640bc	0x66794	putMode(2)	sub_bdea0: 
+IAI	sub_68f9c	0x7076c	putMode(2)	sub_bdea0: 
+ibF	sub_640bc	0x65680	putMode(2)	sub_c003c: 
+ibF	sub_68f9c	0x75378	putMode(2)	sub_c003c: 
+IHa	sub_593f0	0x5a948	putMode(2)	sub_b137c: 'android/webkit/WebSettings' | 'getDefaultUserAgent' | '(Landroid/content/Context;)Ljava/lang/String;'
+IJK	sub_640bc	0x65290	putMode(2)	sub_bd324: 
+IJK	sub_68f9c	0x6a898	putMode(2)	sub_bd324: 
+IJs	sub_640bc	0x6687c	putMode(2)	sub_97438: 'DUHOME' | 'android/content/Context' | 'MODE_PRIVATE' | 'I' | 'getDir' | '(Ljava/lang/String;I)Ljava/io/File;' | 'getAbsolutePath' | '()Ljava/lang/Str
+IOe	sub_593f0	0x5c20c	putMode(3)	sub_af71c: 
+IOe	sub_68f9c	0x72b3c	putMode(3)	sub_af71c: 
+IPV	sub_5da20	0x5efc4	putStr	sub_f773c: '<init>' | '(Ljava/lang/String;)V' ; sub_c6560: '/sys/devices/system/cpu/present'
+IPz	sub_5403c	0x55ca0	putStr	sub_e115c: 
+IPz	sub_5403c	0x56378	putStr	sub_b2030: 'getSSID' | '()Ljava/lang/String;'
+ISX	sub_5f5f4	0x60fac	putMode(0xa)	sub_c2770: 
+iVl	sub_8ddb4	0x8ee64	putStr	sub_f2e84: 'getSharedPreferences' | '(Ljava/lang/String;I)Landroid/content/SharedPreferences;' | 'string' | 'boolean' | 'int' | 'getInt' | '(Ljava/lang/String;I)
+iXj	sub_593f0	0x5d580	putStr	sub_af528: 'bluetooth_name'
+iYB	sub_5403c	0x55dc0	putObj	sub_b3fe0: 'connectivity' | 'getSystemService' | '(Ljava/lang/String;)Ljava/lang/Object;' | 'getActiveNetwork' | '()Landroid/net/Network;' | 'getNetworkCapabilit
+iYB	sub_68f9c	0x6f5e0	putObj	sub_b3fe0: 'connectivity' | 'getSystemService' | '(Ljava/lang/String;)Ljava/lang/Object;' | 'getActiveNetwork' | '()Landroid/net/Network;' | 'getNetworkCapabilit
+iYB	sub_8ddb4	0x8e3fc	putObj	sub_b3fe0: 'connectivity' | 'getSystemService' | '(Ljava/lang/String;)Ljava/lang/Object;' | 'getActiveNetwork' | '()Landroid/net/Network;' | 'getNetworkCapabilit
+iYB	sub_9143c	0x91794	putObj	
+iZS	sub_5da20	0x5f1f4	putInt	
+J7w	sub_56c38	0x5761c	putInt	
+J7w	sub_68f9c	0x736d0	putInt	
+J7w	sub_8ddb4	0x8fc0c	putInt	
+J7w	sub_9143c	0x9175c	putInt	
+JcY	sub_9143c	0x91614	putInt	
+JEw	sub_5da20	0x5ee08	putMode(2)	sub_c69e8: 'uid=%lu gid=%lu'
+jK5	sub_5403c	0x548ac	putMode(0xa)	sub_b2668: 'getBSSID' | '()Ljava/lang/String;'
+JPd	sub_56c38	0x575cc	putStr	sub_a70a0: 'getSimOperator' | '()Ljava/lang/String;' | '0'
+JPd	sub_68f9c	0x76b38	putStr	sub_a70a0: 'getSimOperator' | '()Ljava/lang/String;' | '0'
+JPd	sub_8ddb4	0x8fc9c	putStr	sub_a70a0: 'getSimOperator' | '()Ljava/lang/String;' | '0'
+JPd	sub_9143c	0x91724	putStr	
+JYD	sub_5403c	0x545d8	putInt	
+K5f	sub_67328	0x68428	putStr	sub_6716c: '%s%d%d%d'
+kaU	sub_8ddb4	0x8fa4c	putObj	sub_14fb9c: 
+Kvk	sub_8a7ac	0x8d784	putStr	sub_13dc48: 
+kWV	sub_68f9c	0x78d90	putMode(2)	sub_f3274: 'getSharedPreferences' | '(Ljava/lang/String;I)Landroid/content/SharedPreferences;' | 'getString' | '(Ljava/lang/String;Ljava/lang/String;)Ljava/lang/
+kYm	sub_5da20	0x5f320	putMode(2)	sub_c6980: '/proc/sys/kernel/osrelease' | '/proc/version' | 'uname -a'
+KyU	sub_640bc	0x66e94	putMode(2)	sub_bf0ec: '/data/data/%s/shared_prefs' | '%ld.%ld'
+KyU	sub_68f9c	0x785e4	putMode(2)	sub_bf0ec: '/data/data/%s/shared_prefs' | '%ld.%ld'
+kZJ	sub_5f5f4	0x609e4	putMode(0xa)	sub_4ac00: 'android/app/admin/DeviceAdminReceiver' | 'getManager' | '(Landroid/content/Context;)Landroid/app/admin/DevicePolicyManager;' | 'getWho' | '(Landroid/
+Lcq	sub_628e0	0x62f00	putStr	sub_b12f0: 'getContentResolver' | '()Landroid/content/ContentResolver;'
+LDA	sub_5835c	0x59298	putMode(2)	sub_a546c: 'android.permission.READ_PHONE_STATE' | 'getDeviceSoftwareVersion' | '()Ljava/lang/String;'
+LFE	sub_5da20	0x5f464	putMode(0xa)	sub_c81e0: 'ro.bt.bdaddr_path'
+LkB	sub_56c38	0x57ee8	putInt	
+LkB	sub_68f9c	0x76d58	putInt	
+LkB	sub_9143c	0x91964	putInt	
+LLS	sub_5da20	0x5e474	putStr	sub_c6880: '%d' | '2050E03CA1195807F4CCA14CC6E97462'
+LLS	sub_5da20	0x5e7a8	putStr	
+lPc	sub_56c38	0x57f9c	putObj	sub_a5e04: 'android.permission.READ_PHONE_STATE' | 'phone2' | 'getSystemService' | '(Ljava/lang/String;)Ljava/lang/Object;' | 'phone' | 'phone_msim'
+M96	sub_5f5f4	0x60448	putMode(0xa)	sub_c21b8: 
+M96	sub_68f9c	0x6caf8	putMode(0xa)	sub_c21b8: 
+mbU	sub_628e0	0x63dc4	putMode(2)	sub_ac650: 'com.tencent.mm' | 'com.eg.android.AlipayGphone' | 'com.tencent.mobileqq' | '%ld,%ld,%ld'
+mEC	sub_9143c	0x915a8	putStr	
+mgO	sub_593f0	0x5a1e4	putInt	
+mIS	sub_56c38	0x577e0	putMode(2)	sub_c6580: '/proc/sys/kernel/random/boot_id'
+mIS	sub_68f9c	0x77910	putMode(2)	sub_c6580: '/proc/sys/kernel/random/boot_id'
+mIS	sub_8ddb4	0x8fcc0	putMode(2)	sub_c6580: '/proc/sys/kernel/random/boot_id'
+msg	sub_68f9c	0x6efb8	putObj	sub_1457d0: 
+msg	sub_8ddb4	0x8fc60	putObj	sub_1457d0: 
+Mt4	sub_9143c	0x91a50	putObj	
+My2	sub_7f3f4	0x83814	putStr	sub_149ee0: 
+n1R	sub_56c38	0x57e88	putMode(3)	sub_a781c: 'usb' | 'getSystemService' | '(Ljava/lang/String;)Ljava/lang/Object;' | '()Ljava/util/HashMap;' | 'size' | '()I' | 'values' | '()Ljava/util/Collection
+n9j	sub_12302c	0x123214	putStr	
+NAB	sub_593f0	0x5c6a8	putInt	
+NAB	sub_8a7ac	0x8d918	putInt	
+ncX	sub_628e0	0x63e34	putStr	sub_b12f0: 'getContentResolver' | '()Landroid/content/ContentResolver;' ; sub_efb1c: '/sdcard/../../../../../../sdcard/Android/%s'
+ne8	sub_628e0	0x63c94	putStr	sub_ea898: 
+ne8	sub_68f9c	0x6aea8	putStr	sub_ea898: 
+NoH	sub_56c38	0x57d54	putInt	
+Nue	sub_8a7ac	0x8d208	putMode(2)	sub_dc18c: 
+Nue	sub_9143c	0x91a04	putStr	
+nyx	sub_5f5f4	0x60e68	putMode(0xa)	sub_c2198: 
+nyx	sub_68f9c	0x7660c	putMode(0xa)	sub_c2198: 
+OEu	sub_8a7ac	0x8acf8	putMode(3)	sub_f3274: 'getSharedPreferences' | '(Ljava/lang/String;I)Landroid/content/SharedPreferences;' | 'getString' | '(Ljava/lang/String;Ljava/lang/String;)Ljava/lang/
+oJI	sub_593f0	0x5a60c	putObj	sub_adaf8: 'getSensorList' | '(I)Ljava/util/List;' | 'I'
+OW2	sub_5f5f4	0x5fdc4	putMode(2)	sub_d9e00: 'android/os/Process' | 'myUid' | '()I' | 'ps | grep u0_a%d' | '%s%d'
+OW2	sub_9143c	0x91650	putMode(2)	
+OWY	sub_593f0	0x5c508	putStr	sub_ee314: 'isOpen' | '()Z' | 'query' | '(Ljava/lang/String;[Ljava/lang/String;Ljava/lang/String;[Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;Ljava/lan
+ozK	sub_5403c	0x54e60	putStr	sub_b5f4c: 'connectivity' | 'getSystemService' | '(Ljava/lang/String;)Ljava/lang/Object;' | 'getActiveNetworkInfo' | '()Landroid/net/NetworkInfo;' | 'getSubtypeN
+ozK	sub_68f9c	0x77cb0	putStr	sub_b5f4c: 'connectivity' | 'getSystemService' | '(Ljava/lang/String;)Ljava/lang/Object;' | 'getActiveNetworkInfo' | '()Landroid/net/NetworkInfo;' | 'getSubtypeN
+p1m	sub_640bc	0x66650	putMode(2)	sub_c046c: '/sys/block/mmcblk0/device/serial' | 'r'
+p1m	sub_68f9c	0x6e3cc	putMode(2)	sub_c046c: '/sys/block/mmcblk0/device/serial' | 'r'
+p92	sub_5835c	0x59388	putMode(0xa)	sub_a535c: 'android.permission.READ_PHONE_STATE' | 'getDeviceId' | 'getImei'
+p92	sub_68f9c	0x6fa44	putMode(0xa)	sub_a535c: 'android.permission.READ_PHONE_STATE' | 'getDeviceId' | 'getImei'
+pcJ	sub_593f0	0x5cd40	putMode(3)	sub_af898: 'device_serial'
+pEC	sub_9143c	0x914d4	putStr	
+psg	sub_593f0	0x5be38	putStr	sub_940f8: 'appops' | 'getSystemService' | '(Ljava/lang/String;)Ljava/lang/Object;' | 'getPackageName' | '()Ljava/lang/String;' | 'android/os/Process' | 'myUid' 
+pT4	sub_628e0	0x64060	putStr	sub_ec344: 'toCharsString' | '()Ljava/lang/String;'
+PV8	sub_593f0	0x5d820	putStr	sub_af7cc: 'stay_on_while_plugged_in'
+pwS	sub_8a7ac	0x8d890	putMode(2)	sub_f3274: 'getSharedPreferences' | '(Ljava/lang/String;I)Landroid/content/SharedPreferences;' | 'getString' | '(Ljava/lang/String;Ljava/lang/String;)Ljava/lang/
+Pxm	sub_5f5f4	0x605ec	putMode(2)	sub_c737c: 'date'
+q6I	sub_593f0	0x5bf78	putMode(3)	sub_af6e0: 'pps_oaid'
+q6I	sub_68f9c	0x6fb1c	putMode(3)	sub_af6e0: 'pps_oaid'
+qdK	sub_5f5f4	0x60b18	putStr	sub_c6fbc: 'android/os/SystemClock' | 'elapsedRealtimeNanos' | '()J' | '%lld'
+qdK	sub_8ddb4	0x8f924	putStr	sub_c6fbc: 'android/os/SystemClock' | 'elapsedRealtimeNanos' | '()J' | '%lld'
+QgA	sub_5da20	0x5f5c0	putInt	
+qH9	sub_640bc	0x66f58	putStr	sub_972a0: '0' | 'getApplicationInfo' | '()Landroid/content/pm/ApplicationInfo;' | 'dataDir' | 'Ljava/lang/String;' | '%s/..' | '1'
+QNw	sub_640bc	0x65450	putMode(2)	sub_bdd74: '%ld.%ld,%ld.%ld'
+QNw	sub_68f9c	0x6e528	putMode(2)	sub_bdd74: '%ld.%ld,%ld.%ld'
+QQW	sub_12302c	0x12314c	putInt	
+QQW	sub_5403c	0x55cc0	putInt	
+qUM	sub_5403c	0x56024	putInt	
+QvM	sub_5403c	0x55e7c	putStr	sub_13db08: 
+QVn	sub_593f0	0x5c554	putInt	
+QVn	sub_68f9c	0x749e4	putInt	
+R63	sub_8ddb4	0x8fcec	putStr	
+sAJ	sub_640bc	0x64728	putInt	
+SAu	sub_628e0	0x63cec	putMode(2)	sub_ec3fc: 
+sCc	sub_593f0	0x5d444	putInt	
+sCc	sub_8a7ac	0x8bb90	putInt	
+Slq	sub_8a7ac	0x8d4c8	putMode(3)	sub_f3274: 'getSharedPreferences' | '(Ljava/lang/String;I)Landroid/content/SharedPreferences;' | 'getString' | '(Ljava/lang/String;Ljava/lang/String;)Ljava/lang/
+Sxg	sub_8a7ac	0x8d4f4	putObj	sub_145804: 
+szj	sub_593f0	0x5d904	putMode(3)	sub_af844: 
+T2t	sub_628e0	0x63bb4	putMode(2)	sub_acd98: 'getPackageName' | '()Ljava/lang/String;' | 'getInstallerPackageName' | '(Ljava/lang/String;)Ljava/lang/String;'
+T5u	sub_8a7ac	0x8ca5c	putObj	sub_f773c: '<init>' | '(Ljava/lang/String;)V'
+tbA	sub_593f0	0x5ca20	putStr	sub_af040: 'com.baidu.deviceid'
+tbL	sub_640bc	0x65cc4	putMode(3)	sub_e23c4: 'MD5'
+tLE	sub_593f0	0x5cbf8	putMode(2)	sub_aef8c: 'bd_setting_i'
+TpT	sub_12302c	0x123190	putStr	
+TV5	sub_12302c	0x1232a8	putStr	
+TwQ	sub_593f0	0x5c7a0	putObj	sub_94e5c: 'window' | 'getSystemService' | '(Ljava/lang/String;)Ljava/lang/Object;' | 'android/util/DisplayMetrics' | 'getDefaultDisplay' | '()Landroid/view/Disp
+Uae	sub_56c38	0x579a0	putObj	sub_a57ec: 'android.permission.READ_PHONE_STATE' | 'phone2' | 'getSystemService' | '(Ljava/lang/String;)Ljava/lang/Object;' | 'phone' | 'phone_msim'
+uCM	sub_593f0	0x5b834	putObj	sub_95484: 'getIntExtra' | '(Ljava/lang/String;I)I'
+uCM	sub_8a7ac	0x8d274	putObj	sub_95484: 'getIntExtra' | '(Ljava/lang/String;I)I'
+Ufi	sub_5403c	0x55b70	putObj	sub_ba150: 'android.permission.BLUETOOTH_CONNECT' | 'android/bluetooth/BluetoothAdapter' | 'getDefaultAdapter' | '()Landroid/bluetooth/BluetoothAdapter;' | 'getB
+uG4	sub_5403c	0x55da0	putObj	sub_b305c: 'getAssociatedMloLinks' | '()Ljava/util/List;' | 'size' | '()I'
+UOv	sub_5f5f4	0x60404	putMode(2)	sub_c70f8: '%ld.%ld'
+UOv	sub_68f9c	0x77e98	putMode(2)	sub_c70f8: '%ld.%ld'
+UOv	sub_8a7ac	0x8b9e4	putMode(2)	sub_c70f8: '%ld.%ld'
+UOv	sub_8ddb4	0x8e8b8	putMode(2)	sub_c70f8: '%ld.%ld'
+UOv	sub_9143c	0x91860	putMode(2)	
+ura	sub_640bc	0x66e70	putMode(2)	sub_bdca4: '/storage/self/primary' | '%ld.%ld,%ld.%ld'
+ura	sub_68f9c	0x72804	putMode(2)	sub_bdca4: '/storage/self/primary' | '%ld.%ld,%ld.%ld'
+v1X	sub_68f9c	0x74600	putStr	sub_ef3f8: '/sdcard/../../../../../../sdcard/.%s' | '/sdcard/../../../../../../sdcard/Android/Data/System/local/%s'
+v1X	sub_7f3f4	0x81de0	putStr	sub_ef3f8: '/sdcard/../../../../../../sdcard/.%s' | '/sdcard/../../../../../../sdcard/Android/Data/System/local/%s'
+v6Y	sub_67328	0x68408	putStr	sub_1455f8: 
+VPJ	sub_5da20	0x5e520	putStr	sub_c1d28: '/proc/net/tcp' | 'hex'
+vry	sub_593f0	0x5d248	putMode(3)	sub_af84c: 
+vv1	sub_593f0	0x5c87c	putInt	
+w5v	sub_640bc	0x666c0	putStr	sub_67090: 'pkcg' | '%d'
+w91	sub_640bc	0x658b0	putStr	sub_e23c4: 'MD5'
+w91	sub_68f9c	0x6c30c	putStr	sub_e23c4: 'MD5'
+w97	sub_5da20	0x5ee28	putInt	
+w97	sub_9143c	0x915e0	putInt	
+wSK	sub_5647c	0x56a8c	putStr	sub_b275c: 'wifi' | 'getSystemService' | '(Ljava/lang/String;)Ljava/lang/Object;' | 'getDhcpInfo' | '()Landroid/net/DhcpInfo;' | 'netmask' | 'gateway' | 'ipAddre
+wSK	sub_68f9c	0x748e0	putStr	sub_b275c: 'wifi' | 'getSystemService' | '(Ljava/lang/String;)Ljava/lang/Object;' | 'getDhcpInfo' | '()Landroid/net/DhcpInfo;' | 'netmask' | 'gateway' | 'ipAddre
+wSK	sub_8a7ac	0x8d3bc	putStr	sub_b275c: 'wifi' | 'getSystemService' | '(Ljava/lang/String;)Ljava/lang/Object;' | 'getDhcpInfo' | '()Landroid/net/DhcpInfo;' | 'netmask' | 'gateway' | 'ipAddre
+wSK	sub_9143c	0x918ec	putStr	
+WSZ	sub_5f5f4	0x60f20	putInt	sub_c6ef8: 'elapsedRealtime' | 'uptimeMillis'
+xD5	sub_12302c	0x1232e0	putInt	
+XFU	sub_56c38	0x57df4	putObj	sub_a66a0: 'android.permission.READ_PHONE_STATE' | 'telephony_subscription_service' | 'getSystemService' | '(Ljava/lang/String;)Ljava/lang/Object;' | 'getActiveS
+XH7	sub_593f0	0x5c9e0	putInt	
+XmW	sub_8a7ac	0x8d534	putMode(2)	sub_b6984: ':00:00:00:' | '/89ca503b' | '%s,%ld;'
+XQp	sub_5f5f4	0x602d8	putInt	
+XQp	sub_9143c	0x918ac	putInt	
+xRD	sub_628e0	0x63cc8	putStr	sub_ecfac: 
+Y4c	sub_12302c	0x123280	putStr	
+Yko	sub_5835c	0x58b40	putMode(0xa)	sub_a62ac: 'android.permission.READ_PHONE_STATE' | 'getSubscriberId' | '()Ljava/lang/String;'
+yQD	sub_12302c	0x1231bc	putStr	
+yzW	sub_640bc	0x65060	putMode(2)	sub_976a0: 
+Z2w	sub_514d4	0x51b8c	putStr	sub_c2008: 
+z4e	sub_5403c	0x54978	putInt	
+z4e	sub_9143c	0x9192c	putInt	
+z4m	sub_593f0	0x5cc48	putMode(2)	sub_af07c: 'enabled_accessibility_services' | 'com.hihonor.awareness' | 'com.huawei.hiai' | 'com.miui.securitycenter' | 'com.vivo.ai.ime' | 'com.coloros.colordir
+ZCk	sub_593f0	0x5cf68	putStr	sub_aee88: 'com.shumei.deviceid'
+ZIG	sub_8ddb4	0x8f8cc	putStr	sub_f3274: 'getSharedPreferences' | '(Ljava/lang/String;I)Landroid/content/SharedPreferences;' | 'getString' | '(Ljava/lang/String;Ljava/lang/String;)Ljava/lang/
+zpA	sub_5403c	0x549d8	putStr	sub_b5c5c: 'connectivity' | 'getSystemService' | '(Ljava/lang/String;)Ljava/lang/Object;' | 'getActiveNetworkInfo' | '()Landroid/net/NetworkInfo;' | 'getTypeName
+zpA	sub_68f9c	0x6be3c	putStr	sub_b5c5c: 'connectivity' | 'getSystemService' | '(Ljava/lang/String;)Ljava/lang/Object;' | 'getActiveNetworkInfo' | '()Landroid/net/NetworkInfo;' | 'getTypeName
+zpA	sub_8ddb4	0x90130	putStr	sub_b5c5c: 'connectivity' | 'getSystemService' | '(Ljava/lang/String;)Ljava/lang/Object;' | 'getActiveNetworkInfo' | '()Landroid/net/NetworkInfo;' | 'getTypeName
+zpA	sub_9143c	0x9199c	putStr	
+ZQM	sub_628e0	0x6378c	putMode(2)	sub_ac768: 'com.tencent.mm'
+zsF	sub_12302c	0x123118	putStr	
+zUN	sub_593f0	0x5b094	putMode(2)	sub_af564: 'default_input_method'
+zvW	sub_640bc	0x645e0	putMode(2)	sub_c8934: 
+zvW	sub_68f9c	0x7513c	putMode(2)	sub_c8934: 
+ZZA	sub_593f0	0x5cd98	putInt	
+ZZA	sub_68f9c	0x738e4	putInt	

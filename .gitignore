@@ -1,0 +1,8 @@
+# harness build / run output
+tools/harness/target/
+tools/harness/cp.txt
+tools/harness/trace.log
+tools/harness/unidbg.log
+tools/harness/*.der
+__pycache__/
+*.pyc

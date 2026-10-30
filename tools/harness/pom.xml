@@ -1,0 +1,18 @@
+<project xmlns="http://maven.apache.org/POM/4.0.0">
+  <modelVersion>4.0.0</modelVersion>
+  <groupId>du</groupId><artifactId>harness</artifactId><version>1</version>
+  <properties>
+    <maven.compiler.release>17</maven.compiler.release>
+    <main>du.Harness</main>
+    <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
+  </properties>
+  <dependencies>
+    <dependency><groupId>org.slf4j</groupId><artifactId>slf4j-simple</artifactId><version>2.0.16</version></dependency>
+    <dependency><groupId>org.json</groupId><artifactId>json</artifactId><version>20240303</version></dependency>
+    <dependency><groupId>com.github.zhkl0228</groupId><artifactId>unidbg-android</artifactId><version>0.9.9</version></dependency>
+  </dependencies>
+  <build><plugins>
+    <plugin><groupId>org.codehaus.mojo</groupId><artifactId>exec-maven-plugin</artifactId><version>3.5.0</version>
+      <configuration><mainClass>${main}</mainClass></configuration></plugin>
+  </plugins></build>
+</project>

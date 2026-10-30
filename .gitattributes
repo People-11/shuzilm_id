@@ -1,2 +1,4 @@
 # Auto detect text files and perform LF normalization
 * text=auto
+# keep the samples byte-exact so SHA256SUMS / MD5SUMS verify on any checkout
+sample/** -text

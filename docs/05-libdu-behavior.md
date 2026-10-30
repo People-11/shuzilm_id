@@ -1,0 +1,390 @@
+# 5. libdu.so 的行为
+
+本章只陈述我们**在客户端观察到的事实**：反汇编、单函数模拟执行和 unidbg 整体运行三者之一（多数是两者以上）能对上的才写进来。推断会单独标注。函数偏移、字段键名和样本说明见 [3. 样本说明](03-sample.md)，复现方法见 [4. 工具](04-tools.md)。完整的逐字段数据在 [`docs/data/keys_sources.tsv`](data/keys_sources.tsv) 和 [`docs/data/keys_catalog.tsv`](data/keys_catalog.tsv)。
+
+- [5.1 结构与通信](#51-结构与通信)
+- [5.2 字段编码](#52-字段编码)
+- [5.3 本地持久化](#53-本地持久化)
+- [5.4 首次注册上报 mdna](#54-首次注册上报-mdna)
+- [5.5 环境检测](#55-环境检测)
+- [5.6 后续上报：设备信息全量采集](#56-后续上报设备信息全量采集)
+- [5.7 跨应用 ID 与其他 SDK 的 ID](#57-跨应用-id-与其他-sdk-的-id)
+- [5.8 事件接口](#58-事件接口)
+- [5.9 服务器对采集的调度](#59-服务器对采集的调度)
+- [5.10 没有覆盖到的部分](#510-没有覆盖到的部分)
+
+## 5.1 结构与通信
+
+### 调用入口
+
+宿主 App 通过 Java 类 `cn.shuzilm.core.DUHelper` 调用 SDK。libdu 在 `JNI_OnLoad` 中用 `RegisterNatives` 注册以下 native 方法（偏移来自 harness `NATIVES=1`）：
+
+| 方法 | 偏移 | 说明 |
+|---|---|---|
+| `query(Context, String config, String custom, int, long, long, int[])` | `0x13a280` | 主入口：采集、上报、返回设备 ID（`DU...`） |
+| `run` | `0x13a250` | |
+| `onEvent` / `onIEvent` | `0x13a440` / `0x13a46c` | 分发操作 2 / 3 |
+| `dGZvcmRQ(Context, String, String)` | `0x13cf80` | 操作 7，第一个字符串按 JSON 解析 |
+| `onSensorChanged(SensorEvent)` | | 传感器事件，见 [5.8](#58-事件接口) |
+| `onSSChanged(SignalStrength)` | | 蜂窝信号强度事件 |
+| `aXZlZWNl(Context, Intent)` | | 广播 Intent（蓝牙发现），名字是 base64 的 `iveece` |
+| `oxlbmV0d(Context, Object, int)`、`ttERIJNQ`、`nYfbIIFp`、`zZVTFJRA`、`c6M2YmYQ`、`c6M3YmYQ`、`ntERIJNQ` | | 其他操作，大多没有逐一分析 |
+
+所有操作最终都进入同一个分发函数 `sub_136838`。
+
+酷安传入的配置（`config`）是：
+
+```json
+{"apiKey":"<COOLAPK_APIKEY>","pkglist":"1","operation":"1","cdlmt":"1","l_o":"1"}
+```
+
+### 上报格式
+
+1. 各个“构造函数”把采集到的值放进一个 JSONObject（例如首次上报由 `sub_68f9c` 构造），字段键名是三个字符的无意义串（`foO`、`6yY`、`LAh`……），值按 [5.2](#52-字段编码) 编码。
+2. JSON 文本经 zlib `compress()` 压缩，再与一个 48 字节的固定密钥做循环 XOR（密钥 `xp7j@&!v5]2k#+3z{n9$q^r%[8f1*d4e:c>0l?m/6)yb-=w}`，是 libdu 内置密钥表的第 16 项）。
+3. 通过 HTTPS POST 发出。先尝试 Java 的 `HttpURLConnection`，失败时退回 libdu 自带的 native socket 实现（`sub_3de98`）。传输方式、是否走了回退、耗时等会记进 pref `mtr`，并在下一次上报时作为 `kWV` 发出。
+4. 回包同样是循环 XOR 过的 JSON（不压缩）。
+
+首次注册的 URL：
+
+```
+https://auni.telecome.cn/a/mdna/report?v=8.7&t=m
+    &p=MD5_UPPER("<包名>.37be8a1ee106979a")
+    &r=<随机 UUID，无连字符>&n=0&l=2
+    &h=0                                  （已有 ID 后为 MD5_UPPER(<ID> + ".889e0b01")）
+```
+
+域名是 `telecome.cn`，不是 `telecom.cn`。同一个 libdu 的字符串里还有 `cbsipv4.checktrustworthiness.com`（在 `sub_13a4b8` 中，和 `net_err` 一起出现，用途没有分析）。DuClient 另外把 `global-auni.checktrustworthiness.com` 作为同协议的备用地址，这个域名不在本版本 libdu 的解密字符串里。
+
+成功后，同一次 `query` 中还会继续发出其他类型的上报（[5.6](#56-后续上报设备信息全量采集)）：
+
+| 路径 | 构造函数 | 字段数 | 内容 |
+|---|---|---|---|
+| `/a/mdna/report?v=8.7&t=m` | `sub_68f9c` | 80+ | 首次注册，见 [5.4](#54-首次注册上报-mdna) |
+| `/a/d2api/report?v=8.7&t=a&e=2` | `sub_7f3f4` 等 | ~249 | 设备信息全量 |
+| `/a/dcc2/request?v=2.0&c=1&e=1` | | 58 | mdna 字段的子集 + 少量新字段 |
+| `/a/audd/valid?v=1.0&t=uid1` | | 47 | 同上 |
+| `/a/daa/report?v=1.1&c=1&e=1` | | ~259 | 应用信息 + 与 d2api 相同的全量设备信息 |
+| `/a/dai/report` | | | 2026-10-31 的复现运行中出现，没有单独分析 |
+
+### 回包
+
+mdna 回包中被读取的键（`sub_116f58`、`sub_f2964`）：
+
+| 键 | 去向 |
+|---|---|
+| `err` | 0 表示成功 |
+| `n_a` | 设备 ID（`DU` 开头），写入 pref `n_a` 和外部缓存文件 `e2308fa0`，并作为 `query` 的返回值 |
+| `aid` | pref `aid` + 外部缓存文件 `e2dfcfaa` |
+| `nctl` | pref `nctl` |
+| `cdd`、`ocdd` | pref `cdd`、`sid` |
+| `o_a` | pref `o_a`；在后续上报的回包中还会被写到共享存储，见 [5.7](#57-跨应用-id-与其他-sdk-的-id) |
+| `dlab` | `<pkg>_dna` 的 `device_label`，AES 加密，下一次上报时解密成 `2mV` |
+| `denv`、`isem`、`itime`、`oaid`、`i1`…`i9` | 各自写入 prefs |
+
+## 5.2 字段编码
+
+libdu 的 put 辅助函数 `sub_f07fc` 按“模式”对值编码：
+
+| 模式 | 做法 | 可逆性 |
+|---|---|---|
+| raw | 原样 | — |
+| 2 / 3 | 每个字符的码位 +1，然后重排：奇数长度先放中间字符，之后依次放 `s[n-1-i]`、`s[m-1-i]` | 完全可逆，`tools/python/unenc.py` 十几行就能还原 |
+| 10 | 去掉最后一个字符后按模式 2 编码；另外在 `"s"+键名` 下放校验值 `MD5_UPPER(str(全部字符码位之和))[:7]` | 完全可逆：校验值能确定被去掉的那个字符 |
+| 1、7 | 少数字段使用（`hH1` 蓝牙地址、`9P6` 邻居表），没有逐一核实 | 未核实 |
+
+以 harness 中的模拟设备为例（数据见 `docs/data/payload_*.json`）：
+
+| 字段 | 上报值 | 还原后 |
+|---|---|---|
+| `foO` + `sfOo` | `4ege81284bfbcc8` + `3BF55BB` | ANDROID_ID `7be317f3baa70ddb`（16 个候选字符中只有一个能匹配校验值） |
+| `iYB.Zne` | `f^65;3e054f3g/;2g/g9d742;/c33:d22!;-;51790fgg7\` | `[fe80::1c2b:3cff:fe4d:5e6f/64, 192.168.1.23/24]` |
+| `iYB.txo` | `b1mox` | `wlan0` |
+| `yzW` | `-msqfnlbdyjfm/dn/pfd` | `com.example.clicker,`（已启用的无障碍服务） |
+| `UOv` | `151893:83714141:68/2` | `1793367274.500029800`（开机时间） |
+| `BAj` / `DVp` | `616/36/6636/3` / `722//23/:92` | `255.255.255.0` / `192.168.1.1`（子网掩码 / 网关） |
+
+也就是说，所谓“编码”只是字符层面的混淆。去掉传输层的 TLS 和固定密钥 XOR 之后，服务器拿到的就是原始值。只有少数字段在客户端做了真正不可逆的处理（MD5 或只上报检测结果）。
+
+## 5.3 本地持久化
+
+| 位置 | 格式 | 内容 |
+|---|---|---|
+| `<pkg>_prefs`（SharedPreferences） | 键 = `MD5_UPPER(名字)`；值 = `base64(MD5_UPPER(v) + v)`，或者原样 | 设备 ID（`n_a`）、`aid`、`o_a`、首个 ANDROID_ID（`ndcd`）、`boot_uuid`、启动次数 `boot_times`、首次安装时间 `fut` / 更新时间 `lut`、上次传输统计 `mtr`、各类上报的上次时间（`mdrt`、`uddrt`、`aart`、`acc.dat`、`aio.dat` 等）、服务器下发的调度参数、信号强度 `ss2`、各类传感器读数 `ss3-<type>` 等 |
+| `<pkg>_dna`（SharedPreferences） | 明文 | `device_label`（服务器下发，AES 加密）、`ioaid`、`device_id`、`i1`…`i9` |
+| `<外部缓存目录>/e2308fa0` | `base64(MD5+v)`，≤128 字节 | 设备 ID |
+| `<外部缓存目录>/e2dfcfaa`、`eae6ff4a` | 同上 | `aid`、`nctl` |
+| `/sdcard/.o_a`、`/sdcard/Android/Data/System/local/o_a` | `base64(MD5+v)` | 跨应用 ID，见 [5.7](#57-跨应用-id-与其他-sdk-的-id) |
+| `/sdcard/Android/ZHVzY2Lk`（base64 的 `duscid`） | | 服务器下发的 `nsci` / `sci` |
+
+**识别“重装后恢复数据”**：SDK 第一次运行时（pref `boot_times` 不存在）会记下 `fut` = 当前安装的 `firstInstallTime`。以后每次上报都会比较这两个值；如果 prefs 还在、`fut` 却和当前安装时间对不上，说明这些 prefs 是从备份或换机工具恢复到了一个新安装里。这时上报 `3k9 = 1`，并把之前保存的设备 ID 作为 `8N4` 一并发出（`sub_140768`、`sub_13d5a4`）。
+
+## 5.4 首次注册上报 mdna
+
+由 `sub_68f9c(env, ctx, 1)` 构造（一个 762 个状态的平坦化状态机，见 `tools/data/sm_68f9c.txt`），每次 `query` 都会发送。下表是它的全部字段。
+
+“DuClient”一列打 ✓ 的，是 DuClient 实际发送的最小字段集。没有这些字段，服务器不返回 ID。其余字段在 DuClient 中以注释形式保留了实现。
+
+### 身份标识
+
+| 键 | 值 | 如何获得 | 编码 | DuClient |
+|---|---|---|---|---|
+| `foO` / `sfOo` | ANDROID_ID | `Settings.Secure.ANDROID_ID`（`sub_4bf54`） | 10（可还原） | ✓ |
+| `P1J` / `AYk` | 由 ANDROID_ID 派生的“MAC” | `SHA1_UPPER(ANDROID_ID)` 取 `[1:7]:[13:19]:[7:13]`；有了服务器下发的 `o_a` 后，`P1J` 改为 `o_a` | raw | ✓ |
+| `6yY` | Widevine 设备唯一 ID | `MediaDrm(edef8ba9-…).getPropertyByteArray("deviceUniqueId")`，hex（`sub_b6e04`） | raw | ✓ |
+| `ubF` | 上一次拿到的设备 ID | pref `n_a` / `n_b` / `n_c` / `n_d` 中第一个存在的 | raw | ✓ |
+| `dLH` | 每次安装生成的随机 UUID | pref `boot_uuid`，SDK 首次运行时生成（`sub_133048`） | 2 | ✓ |
+| `mIS` | 内核本次开机的 boot_id | `/proc/sys/kernel/random/boot_id`（`sub_c6580`） | 2 | |
+| `K5f` | 本次上报的 ID | `MD5_UPPER(上报时间串 + pid + rand() + tid)`（`sub_6716c`） | raw | |
+
+### SDK 与协议
+
+| 键 | 值 | DuClient |
+|---|---|---|
+| `75c` | 宿主的 apiKey | ✓ |
+| `DUv` | 宿主包名 | ✓ |
+| `3mS` | SDK 版本 `v9.0.1` | ✓ |
+| `AAA` / `BBB` | `v1.0` / `v1.0` | ✓ |
+| `UOv` | 开机时刻：`CLOCK_REALTIME - CLOCK_BOOTTIME`，`"%ld.%ld"`（`sub_c70f8`），模式 2 | ✓ |
+| `2cO` | 本次上报时间，`秒.毫秒000000` | ✓ |
+| `ne8` | libdu.so 自身的 MD5（`sub_ea898`；推断：用来检测 SDK 是否被替换） | |
+| `msg` | 宿主传入的自定义 JSON（酷安传 `{"custom":""}`） | |
+| `GVp` | 渠道（`DefaultChannel`） | |
+| `fxb` | `100000 + 本地小时 × 20 + rand() % 10 ± 1`（`sub_6869c`） | |
+| `B3k` | 构造这个 payload 花了多少毫秒 | |
+| `Db2` / `cHo` | 常量 2 / 0 | |
+
+### 设备与系统
+
+| 键 | 值 | 如何获得 | DuClient |
+|---|---|---|---|
+| `R37` / `R3d` | 厂商 / 型号 | `Build.MANUFACTURER` / `Build.MODEL` | ✓ |
+| `R41` / `SAN` | 系统版本 / API 级别 | `Build.VERSION.RELEASE` / `SDK_INT` | ✓ |
+| `R53` | `ro.debuggable` | 系统属性 | |
+| `R63` | `init.svc.adbd`（adbd 是否在运行） | 系统属性 | |
+| `Ra` / `R5a` | SIM 状态 / 运营商代码 | `gsm.sim.state` / `gsm.operator.numeric` | |
+| `R1e` | `net.hostname` | 系统属性，模式 2 | |
+| `S6e` | SELinux 是否 enforcing | `/sys/fs/selinux/enforce` | |
+| `fPV` | 国家,语言 | `Locale.getDefault()` | |
+| `h6Z` | 宿主 App 的显示名称 | `getApplicationLabel` | |
+| `EV2` / `Zrs` / `h8h` | 宿主版本名 / 版本号 / longVersionCode | `PackageInfo` | |
+| `Qg1` / `LMi` | 宿主首次安装时间 / 最后更新时间 | `PackageInfo` | |
+| `G8U.MYA` | `MemTotal,MemFree`（kB） | `/proc/meminfo` 前 5 行（`sub_b19b4`） | |
+| `G8U.H4S` | `/data` 总容量,可用容量（GiB） | `statfs` | |
+
+### 文件系统与硬件指纹
+
+这些字段单独看都不是“ID”，但组合起来几乎每台设备都不同，其中不少（inode、分区参数、硬件序列号、系统库摘要）在刷机或恢复出厂之前一直不变。
+
+| 键 | 值 | 如何获得 | 编码 |
+|---|---|---|---|
+| `ibF` | 根分区 fsid + 块数 + inode 数 | `statfs("/")`，`"%x%x-%ld-%ld"`（`sub_c003c`） | 2 |
+| `52J` | 10 个路径的 inode:dev | `lstat` `/sdcard`、`/system/lib`、`/system/lib64`、`/system/bin`、`/sys/block`、`/vendor/lib`、`/dev/null`、`/dev/block`、`/storage/emulated/0`、`/system/vendor`（`sub_cb304`） | 2 |
+| `aFw`、`Bos`、`IAI`、`IJK`、`QNw`、`ura` | 目录的访问/修改时间（纳秒精度） | `stat` `/data/system`、`/sdcard/Android/data/.nomedia`、`DCIM`、`/storage/emulated/0`、`/sdcard/Android/data/com.google.android.gms`、`/storage/self/primary` | 2 |
+| `KyU` | 宿主 `shared_prefs` 目录的访问时间 | `stat`（`sub_bf0ec`） | 2 |
+| `p1m` | eMMC 序列号 | `/sys/block/mmcblk0/device/serial` | 2 |
+| `dJs` | eMMC CID | `/sys/block/mmcblk0/device/cid` 前 32 字节 | 2 |
+| `GZY` | SoC 序列号 | `/sys/devices/soc0/serial_number` | 2 |
+| `w91` | `/system/fonts` 文件名列表的 MD5 | `readdir`（`sub_bba60`） | raw |
+| `gEd` | `libreference-ril.so` 或 `libc.so`（32 位）的 MD5 | 读文件（`sub_bc530`） | raw |
+| `5Tv` | `/system/lib64/libcutils.so` 的 MD5 | 读文件（`sub_bc404`） | 2 |
+| `zvW` | Canvas 指纹 | 在一张 64×64 的内置 PNG 上画径向渐变和一串混合了中、阿、日文的文字，对像素取 MD5（`sub_c8934`） | 2 |
+| `YWu` | **hosts 文件内容** | `/system/etc/hosts`，每行 `ip+host;`，最多 511 字符（`sub_d82f4`） | raw |
+
+`YWu` 值得单独说一句：用 hosts 文件屏蔽广告或跟踪域名的用户，这份屏蔽列表的开头会原样上报。
+
+### 网络
+
+| 键 | 值 | 如何获得 | 编码 |
+|---|---|---|---|
+| `iYB` | 当前网络：接口名 `txo`、全部 IP 地址 `Zne`、DNS 服务器 `MCN`、HTTP 代理主机 `9X9` / 端口 `dki`、传输类型位图 `AWo`、传输类型名 `mch`、上下行带宽 `8tS` / `Hsz` | `ConnectivityManager` + `LinkProperties` + `NetworkCapabilities`（`sub_b3fe0`） | 2（代理主机 raw） |
+| `7S2` | **所有**网络的接口名、IP、DNS | `getAllNetworks()`（`sub_b3b6c`） | 2 |
+| `wSK` | Wi-Fi 的 DHCP 地址 | `WifiManager.getDhcpInfo()`（`sub_b275c`） | raw |
+| `zpA` / `ozK` | 网络类型 / 子类型名 | `getActiveNetworkInfo()` | raw |
+| `J7w` | 移动数据是否打开 | `isDataEnabled` / `getMobileDataEnabled`（`sub_b6220`） | raw |
+
+### 硬件与电话标识
+
+| 键 | 值 | 如何获得 | 编码 |
+|---|---|---|---|
+| `41j` / `nyx` / `M96` | wlan0 / wlan1 / p2p0 的 MAC | `/sys/class/net/*/address`，否则 `ip link`；`11:22:33:44:55:66`、`02:00:00:00:00:00` 等占位值不算数（`sub_4adb4`、`sub_c2198`、`sub_c21b8`） | 10 |
+| `fM0` | 推算出的**出厂 MAC** | Android 9+ 上 wlan0 给的是随机 MAC 时，用 wlan1 / p2p0 的地址（驱动通常由出厂 MAC 派生）反推出厂地址（`sub_4afb4`，Kotlin 移植与原函数在 3000 组随机输入上结果一致） | 10 |
+| `p92` / `3J5` | IMEI / DeviceId | `getDeviceId()` 或 `getImei()`，需要 `READ_PHONE_STATE`（`sub_a535c` / `sub_a5544`）；宿主可以通过 `DUHelper.mMeic` 关闭 | 10 |
+| `LkB` | 数据网络类型 | `getDataNetworkType()` | raw |
+| `JPd` / `bf7` / `4VP` | SIM 运营商 / 注册网络运营商 / SIM 状态 | `TelephonyManager` | raw |
+| `IOe` / `q6I` | 系统设置里的 OAID / 华为 `pps_oaid` | `Settings.Secure/Global` | 3 |
+| `fV5`、`JCE`、`CVi`……共 21 个 | 各厂商广告 ID：`asaid suaid mzaid nbaid gaid hwaid hrid laid voaid opaid sanl xmid onepid mtid zteid fmid ssuid pzid cpid ebkd exoid`；另有 `za7` = 获取时间 | 由 SDK 的 Java 层写进 `<pkg>_prefs`，native 读取（`sub_51d44`） | 3 |
+| 14 个模拟器属性 | `bst.machine_id`、`nemud.player_uuid`、`ro.microvirt.hmac`、`persist.nox.device_id`、`vmprop.androidid`…… | 系统属性（`sub_7dbec`），存在时才上报 | 2 |
+
+### 来自 SDK 历史状态的字段
+
+这些字段不会出现在一台设备的第一次上报里，只在 SDK 之前的运行留下了状态后才出现。我们在 harness 中伪造成功回包、连续查询两次确认了这一点：
+
+| 键 | 值 |
+|---|---|
+| `dGh` | 第一次上报时的 ANDROID_ID（pref `ndcd`）。之后即使 ANDROID_ID 被改掉（例如用改机工具），服务器仍能看到最初的值 |
+| `kWV` | 上一次上报的 `K5f`、传输方式、是否回退、回退耗时、总耗时 |
+| `wHp` / `nAt` | 服务器下发的 `aid` / `nctl` |
+| `w5v` | 宿主是否出现在 `getPackagesHoldingPermissions(INTERNET)` 的结果里，以及安装时间是否一致：0 一致，1 不一致，2 列表不可用（`sub_aa7b0`）。推断：用来检测宿主是否运行在多开或虚拟环境里 |
+| `2mV` | 服务器下发的设备标签：`<pkg>_dna device_label` 用 `MD5_UPPER("<pkg>.54bc01a66a")[:16]` 做 AES/ECB 解密 |
+| `v1X` | 跨应用 ID `/sdcard/.o_a`，见 [5.7](#57-跨应用-id-与其他-sdk-的-id) |
+| `3k9` / `8N4` | prefs 被恢复到了新安装里 / 之前保存的设备 ID，见 [5.3](#53-本地持久化) |
+| `My2` | 宿主配置的 partnerCode（酷安没有传） |
+
+## 5.5 环境检测
+
+mdna 的检测项由 `sub_61074` 一组函数完成。下表的“安全值”是普通的、没有改动过的手机上会得到的值，也就是 DuClient 注释中填写的值。
+
+| 键 | 检测什么 | 怎么检测 | 安全值 |
+|---|---|---|---|
+| `tth` | Root 管理器 | 用 `getPackageInfo` 逐个查询 14 个包名：SuperSU、Superuser、KingRoot、Magisk Alpha、KernelSU、Fox's Magisk Module Manager……（`sub_cd8ac`） | 0 |
+| `QgA` | su 程序 | `/system/bin/su`、`/system/xbin/su`、`/sbin/su` 等 6 个路径是否存在（`sub_c36e8`） | 0 |
+| `90P` | Magisk 挂载 / 宿主 APK 可读性 | `/proc/self/mountinfo` 中是否出现 `magisk`；宿主 APK 是否可读（`sub_cfcfc`） | `11` |
+| `LAh` | Hook / 虚拟化框架，8 组各占一位 | 是否安装了 LSPosed、VirtualXposed、Xposed / EdXposed、Substrate / Dreamland、Shizuku、HideMyApplist、Magisk、太极 / 改机工具（`sub_ce2e4`） | `11111111` |
+| `Xl9` | 进程内的注入 | `/proc/self/maps` 中是否有 `xposed`、`frida`（`sub_d9980`）。libdu 中另有一处（`sub_cb778`）遍历 `/proc/self/task`，查找 frida 的线程名 `gum-js-loop`、`gmain`，对应哪个字段没有确认 | `0000` |
+| `iZS` | 调试器 | `/proc/self/status` 的 `TracerPid` | 0 |
+| `5mZ` | TLS 校验被 Hook（抓包绕过） | 11 个证书校验相关的 Java 方法（`TrustManagerImpl.checkServerTrusted`、`SSLContext.init`、`CertPinManager.isChainValid`……）是否被改成了 native（`sub_d8e1c`） | 0 |
+| `0KQ` | TLS 校验被全局关闭 | 默认 TrustManager 是否接受**空证书链**（`sub_d90e4`） | 0 |
+| `D32` | 虚拟摄像头 | `Camera.setPreviewCallback`、`CameraDeviceImpl.createCaptureSession`、`ImageReader.newInstance` 等 5 个方法是否被改成 native（`sub_d9ca0`） | 0 |
+| `bzt` | 改机（伪造 IMEI） | `TelephonyManager.getDeviceId / getImei / getMeid / getSubscriberId` 是否被改成 native（`sub_d862c`） | `0000` |
+| `nur` | 自动点击 / 脚本工具 | 31 个包名：按键精灵、触动精灵、Auto.js、自动点击器……（`sub_cd32c`） | 0 |
+| `qH9` | 沙箱是否完整 | 宿主数据目录的上级目录能否列出（`sub_972a0`） | `0` |
+| `Chh` | 存储访问 | `/storage/emulated/0/Android/data` 是否可读 | 0 |
+| `c2O` / `PV8` | 开发者选项 | `Settings.Global` `adb_enabled` / `stay_on_while_plugged_in` | `0` |
+| `wlM` | USB 连接与 ADB | 粘性广播 `USB_STATE` 的 `connected` / `adb`（`sub_cec88`） | 0 |
+| `ZZA` | VPN | `/sys/class/net/tun0`、`ppp0`、`tap0` 是否存在（`sub_bc708`） | 0 |
+| `QVn` | 权限 | 宿主是否获得粗略定位、精确定位、附近 Wi-Fi、电话、蓝牙扫描、读存储权限，每项一位（`sub_9200c`） | 视宿主而定 |
+| `yzW` | 已启用的无障碍服务 | 每个服务的**包名**，逗号分隔（`sub_976a0`），模式 2 | 不上报 |
+| `Q23` | 用户安装的 CA 证书 | `AndroidCAStore` 中 `user:` 开头的别名 + 签发者，最多 1023 字符（`sub_d7dd4`） | 不上报 |
+| `S6e`、`R53`、`R63` | SELinux / 可调试 / adbd | 见 5.4 | 1 / 0 / stopped |
+
+注意 `yzW` 和 `Q23` 上报的不是“有 / 没有”，而是具体内容：开了哪些无障碍服务（读屏软件、自动化工具、密码管理器……），装了哪些自签证书（抓包工具、企业代理……）。
+
+## 5.6 后续上报：设备信息全量采集
+
+mdna 成功后，同一次 `query` 里会继续发送 d2api、dcc2、audd、daa 等上报（[5.1](#51-结构与通信)）。其中 d2api 和 daa 各有约 250 个字段，在 mdna 的基础上增加了下面这些内容。
+
+除特别说明外，需要权限的项只在宿主已获得该权限时采集。
+
+| 类别 | 键 | 内容 | 如何获得 |
+|---|---|---|---|
+| **其他 SDK 的设备 ID** | `tbA` / `tLE` | 百度设备 ID | `Settings.System` `com.baidu.deviceid` / `bd_setting_i` |
+| | `ZCk` | 数美设备 ID | `Settings.System` `com.shumei.deviceid` |
+| | `e4U` / `F9K` | 阿里 UTDID | `Settings.System` `mqBRboGZkQPcAkyk` / `dxCRMxhQkdGePGnp` |
+| | （`I68` 附近） | 字节跳动 AppLog / 穿山甲 的设备 ID | 宿主 SharedPreferences `embed_applog_stats` 的 `device_id`、`ttopenadsdk` 的 `did` |
+| | `OWY` | 某 SDK 的 SQLite 库 | 打开并查询 `databases/zx.db`（`sub_ee314`） |
+| | `go9` / `fEs` / `pcJ` | 小米健康 ID / OPPO 安全 UUID / 设备序列号 | `Settings.Global` `mi_health_id` / `op_security_uuid` / `device_serial` |
+| | `v5q` | 另一 SDK 写在共享存储上的 ID | `/sdcard/..ccvid`、`/sdcard/Android/Data/System/local/.ccvid` |
+| **其他 App** | `mbU` | 微信、支付宝、QQ 的首次安装时间 | `getPackageInfo`，`"%ld,%ld,%ld"`（`sub_ac650`） |
+| | `ZQM` | 微信 APK 的路径（判断是否分身） | `ApplicationInfo.sourceDir`（`sub_ac768`） |
+| | `T2t` | 宿主是从哪个应用商店安装的 | `getInstallerPackageName`（`sub_acd98`） |
+| | `6PH` | 当前有网络连接的 App | 解析 `/proc/net/tcp`、`tcp6`、`udp`、`udp6`，按 uid 对应到包名（`sub_92540`） |
+| | `OW2` | 进程列表 | 执行 `ps \| grep u0_a<uid>`（`sub_d9e00`） |
+| | `psg` | 是否正在录屏 / 投屏 | appops `DetectActiveMediaProjection` 等（`sub_940f8`） |
+| | `5Nc` / `zUN` | 默认桌面 / 默认输入法 | `ACTION_MAIN + CATEGORY_HOME` / `default_input_method` |
+| | `z4m` | 已启用的无障碍服务（与厂商白名单比较） | `enabled_accessibility_services` |
+| | `pT4` / `SAu` / `Cl5` | 宿主签名摘要 / 签名证书主体 / 宿主 APK 路径 | `PackageManager`、`CertificateFactory` |
+| **周边网络与设备** | `9P6` | **局域网邻居表**：路由器和同网段其他设备的 IP 与 MAC | 执行 `ip neigh` + netlink 邻居查询（`sub_c2740`） |
+| | `Dg1` | **周围的 Wi-Fi 扫描结果** | `WifiManager.getScanResults()`，需要粗略定位权限（`sub_b4754`） |
+| | `IPz` / `jK5` | 当前 Wi-Fi 的 SSID / BSSID（路由器 MAC） | `WifiInfo`（`jK5` 模式 10） |
+| | `Ufi` | **已配对的蓝牙设备** | `BluetoothAdapter.getBondedDevices()`，需要 `BLUETOOTH_CONNECT`（`sub_ba150`） |
+| | `hH1` / `iXj` | 本机蓝牙地址 / 蓝牙名称 | `Settings.Secure` `bluetooth_address` / `bluetooth_name` |
+| | `BAj` / `DVp` | 子网掩码 / 网关 | `DhcpInfo` |
+| | `02P`、`59p`、`uG4`、`JIi`、`z4e`、`JYD` | Wi-Fi 链路速率、Wi-Fi 7 MLO 链路、Wi-Fi 状态与标准 | `WifiInfo` |
+| | `9N2` / `Bn2` | 移动数据流量 / 总流量（收、发字节数） | `TrafficStats` |
+| | `43c` / `CzO` | 系统 HTTP 代理 | `http.proxyHost` / `http.proxyPort` |
+| | `1yT` | 是否开启了 MAC 随机化 | `wifi_connected_mac_randomization_enabled` |
+| | `EmH` / `g5k` / `ISX` | eth0 / eth1 / eth2 的 MAC | `/sys/class/net/ethN/address`（模式 10） |
+| | `kZJ` | 设备管理员可读的 Wi-Fi MAC | `DevicePolicyManager.getWifiMacAddress` |
+| | `LFE` | 蓝牙地址文件路径 | `ro.bt.bdaddr_path` |
+| **电话** | `dj3` | ICCID（SIM 卡序列号） | `getSimSerialNumber` / 订阅信息（`sub_a6438`） |
+| | `Yko` | IMSI | `getSubscriberId`（模式 10） |
+| | `XFU` / `lPc` / `Uae` / `sJN` | 活动订阅、各卡槽信息、卡数 | `SubscriptionManager`、`phone2` / `phone_msim` |
+| | `LDA` | 基带软件版本 | `getDeviceSoftwareVersion` |
+| | `hdw` / `NoH` | VoLTE、锁屏是否设置密码、漫游 | `Settings`、`KeyguardManager` |
+| | `n1R` | 连接的 USB 设备 | `UsbManager.getDeviceList()` |
+| **硬件与系统** | `vB2` 内约 70 个 `R*` 键 | 构建信息全量：指纹、bootloader、基带、radio、时区…… | 系统属性 |
+| | `oJI` | 传感器列表 | `getSensorList(TYPE_ALL)` |
+| | `Fi3` / `TwQ` | 显示器列表 / 显示参数 | `DisplayManager`、`DisplayMetrics` |
+| | `uCM` | 电池状态 | `ACTION_BATTERY_CHANGED` |
+| | `8ET` | GNSS 芯片型号 | `getGnssHardwareModelName` |
+| | `IHa` | WebView UA | `WebSettings.getDefaultUserAgent` |
+| | `kYm` | 内核版本 | `/proc/sys/kernel/osrelease`、`/proc/version`、`uname -a` |
+| | `cgU` / `eHZ` / `Aop` / `IPV` | 温度 / CPU 最大、当前频率 / CPU 核心 | `/sys/class/thermal/...`、`/sys/devices/system/cpu/...` |
+| | `XH7` / `vv1` / `NAB` / `sCc` | 音量 / 铃声模式 / 屏幕是否亮着 / 是否在交互 | `AudioManager`、`PowerManager` |
+| | `7Gf` / `anY` | 无障碍是否开启 / 设备管理员是否激活 | |
+| | `Hg6` / `Pxm` / `qdK` / `WSZ` | 开机时间 / `date` 命令输出 / elapsedRealtimeNanos / uptime | `/proc/uptime` 等 |
+| | `ED2` | 随机 UUID | `/proc/sys/kernel/random/uuid` |
+| | `9lc` / `JEw` / `IJs` | 进程 cgroup / uid、gid / 数据目录 | `/proc/self/cgroup` 等 |
+| | `fej` | 硬件密钥库探测 | 在 AndroidKeyStore 中生成一个 EC 密钥 `du_tkai_<时间>_<n>_<pid>`（字符串表里有 `setAttestationChallenge`），然后删除 |
+| | `eBI` | 时区数据库版本 | `/data/misc/zoneinfo/current/tzdata`、`/system/usr/share/zoneinfo/tzdata` |
+| | `7Hz` | `/data/local/tmp` 的访问/修改时间（推断：用来判断是否用 adb 推送过文件） | `stat` |
+| | `XmW` / `Ell` | SDK 自己记录的 MAC 历史 / 另一个状态文件 | `/89ca503b`、`/ee02ad45` |
+
+这张表是按类别挑出的代表字段，没有列全。全部约 250 个字段及其来源函数、解出的字符串见 [`keys_sources.tsv`](data/keys_sources.tsv)。
+
+## 5.7 跨应用 ID 与其他 SDK 的 ID
+
+### 共享存储上的跨应用 ID
+
+在一类后续上报（内部类型 6，由 `sub_7f3f4` 构造，回包由 `sub_11f7f0` 处理，很可能就是 d2api）的回包里，如果带有至少 11 个字符的 `o_a`，并且宿主没有关闭这项功能（`data_163418 != 0x2718`），libdu 会通过 shell 执行：
+
+```sh
+mkdir -p /sdcard/Android/Data/System/local/
+echo <base64(MD5(o_a) + o_a)> > /sdcard/Android/Data/System/local/o_a
+echo <base64(MD5(o_a) + o_a)> > /sdcard/.o_a
+```
+
+（实际路径写成 `/sdcard/../../../../../../sdcard/...`，`sub_ef53c`，命令由 `sub_ee084` 执行。）
+
+之后**任何集成了这个 SDK 的 App**，在 mdna 中都会读取这个文件，作为 `v1X` 上报（`sub_ef3f8`）。同一个回包处理函数还会把 `nsci` 写进 `/sdcard/Android/ZHVzY2Lk`（base64 的 `duscid`），后续上报中的 `Kvk` 就是这个文件的 MD5（文件不存在时取一个新随机 UUID 的 MD5）。
+
+这意味着：
+
+- 这个 ID 放在共享存储上，**卸载 App 不会删除它**，清除 App 数据也不会；
+- 同一台设备上的不同 App（不同开发者、不同签名）通过这个文件拿到同一个值，**Android 8 起 ANDROID_ID 按签名隔离，本来是为了防止这种跨应用关联，这个文件让这层保护失效**；
+- 文件在共享存储上，任何有存储权限的 App 都能读，不只是集成了数盟 SDK 的 App。
+
+由于 unidbg 不支持 exec，这段 shell 写入在 harness 里没有真正执行，以上内容来自静态分析和对写入函数的单独模拟。作用域存储（Android 11+）下宿主还能否写入 `/sdcard` 根目录，取决于宿主的存储权限，我们没有在真机上验证。
+
+### 读取其他 SDK 的 ID
+
+见 [5.6](#56-后续上报设备信息全量采集) 的第一组：百度、数美、阿里 UTDID、字节跳动 AppLog、穿山甲的设备 ID，以及其他 SDK 写在共享存储（`..ccvid`）和数据库（`zx.db`）里的标识，都会被读取并上报。另外 mdna 本身还读取 21 个厂商广告 ID（[5.4](#54-首次注册上报-mdna)）。
+
+## 5.8 事件接口
+
+除了 `query` 这种一次性的采集，libdu 还导出了几个接收**持续事件**的 native 方法：
+
+| 方法 | 输入 | 处理 |
+|---|---|---|
+| `onSensorChanged(SensorEvent)` | 传感器事件 | 按传感器类型保存读数到 pref `ss3-<type>`，供后续上报使用 |
+| `onSSChanged(SignalStrength)` | 蜂窝信号强度 | dBm、LTE RSRP / RSRQ / RSSNR 存入 pref `ss2` |
+| `aXZlZWNl(Context, Intent)` | 广播 | 处理蓝牙发现的 `ACTION_FOUND`：附近设备的地址、名称、信号强度、设备类别，按 `"%s,%s,%d,%d;"` 累积 |
+
+也就是说，只要宿主（或 SDK 的 Java 层）注册了相应的监听，SDK 就能拿到持续的传感器数据、信号强度，以及**附近蓝牙设备的扫描结果**。daa 上报中的 `ciD` / `awt` / `kaU` 三个全局 JSON 对象由这些路径填充（具体哪个对象对应哪类事件没有核实）。
+
+SDK 的 Java 部分没有分析（[3.2](03-sample.md#32-sdk-的-java-部分)），所以“谁在什么时候注册这些监听”我们不知道。我们确认的只是：native 层具备完整的处理逻辑。
+
+## 5.9 服务器对采集的调度
+
+d2api 回包由 `sub_11b8d8` 处理。它读取一批混淆过的键，写入对应的 prefs：
+
+| 回包键 | pref | 含义（推断） |
+|---|---|---|
+| `Pbs` | `down_t` | 各类后续上报的下次执行时间 / 间隔 |
+| `yns` | `udd_t` | 同上 |
+| `T9s` | `dai_t` | 同上 |
+| `SBW` / `a59` / `fLS` / `PWh` / `0bm` / `f1V` | `ld_t` / `cfg_t` / `ncht` / `ptsk` / `downs` / `clso` | 同上，以及配置 |
+| `itime` / `EC3` | `imdrt` / `parr2` | 模式 3 存储 |
+| `NXF`、`ueJ`、`Qz9`、`VP8`、`LCS`、`C1G`、`jUl`、`TQa`、`nnt`、`2sW{VrJ,Vt9,cYD}`、`6mi`、`C49`、`6Up`、`OKF`、`CdN` | — | 与 `"0"` / `"1"` / `"2"` 比较的开关 |
+
+推断：以 `_t` 结尾的 pref 是各类后续上报上一次的执行时间。哪些上报要做、多久做一次，由服务器通过回包下发的开关和间隔决定。换句话说，客户端实际采集什么，可以由服务器远程调整，而不是固定在 SDK 版本里。
+
+## 5.10 没有覆盖到的部分
+
+- **需要权限、真机或服务器配合才会出现的字段**：`02P 0q1 0wL 1yT 3pD 59p 6PH 9P6 Blv Bsy Dg1 EIx Ell EmH Hg6 IPz ISX JcY Lcq Nue OEu OW2 Pxm QvM SAu Slq Sxg T5u TV5 TpT` 等，在 harness 中没有实际运行到。它们的来源只能从静态字符串判断（见 `keys_sources.tsv`）。
+- **栈上 XOR 字符串**：少数采集函数的字符串是在栈上逐字节拼出来的，静态扫描看不到。我们用 harness 运行时归因和 `leafstr.py` 补了一部分，`keys_sources.tsv` 中值来源为空或 `?` 的字段还没有完全确认。
+- **d2api 回包中各个开关的具体含义**：只确认了它们写到哪个 pref、和什么值比较。
+- **其他 native 操作**：`sub_136838` 分发的 `ttERIJNQ`、`nYfbIIFp`、`zZVTFJRA` 等。
+- **SDK 的 Java 层**：完全没有分析。
+- **服务端**：服务器如何使用这些数据、如何计算风险、ID 和数据保存多久，我们看不到。第 6 章的相关内容都是推断。

@@ -118,23 +118,46 @@ object DuClient {
         "com.alephzain.framaroot", "me.weishu.kernelsu"
     )
 
-    // libdu sub_ce2e4 (LAh): hook / virtual-app frameworks, one digit per group
+    // libdu sub_cec90 (LAh): hook / virtual-app / spoofing / hiding tools, one digit per group in this order
+    // (each group checked in the harness by installing one of its packages)
     private val HOOK_GROUPS = listOf(
-        listOf("org.lsposed.manager", "org.lsposed.lspatchs"),
-        listOf("io.va.exposed", "io.va.exposed64", "io.virtualapp.sandvxposed64"),
-        listOf("de.robv.android.xposed.installer", "org.meowcat.edxposed.manager"),
-        listOf("com.saurik.substrate", "top.canyie.dreamland.manager"),
-        listOf("moe.shizuku.privileged.api"),
-        listOf("com.tsng.hidemyapplist", "com.tsng.hidemyroot"),
         listOf("com.topjohnwu.magisk", "io.github.huskydg.magisk"),
-        listOf("me.weishu.exp", "com.soft.apk008v", "com.yztc.studio.plugin", "com.uwish.app")
+        listOf("de.robv.android.xposed.installer"),
+        listOf("org.meowcat.edxposed.manager", "io.va.exposed", "io.va.exposed64", "io.virtualapp.sandvxposed64"),
+        listOf("org.lsposed.manager", "org.lsposed.lspatchs"),
+        listOf("com.saurik.substrate"),
+        listOf("com.soft.apk008v", "moe.shizuku.privileged.api"),
+        listOf("com.yztc.studio.plugin"),
+        listOf("com.uwish.app", "com.tsng.hidemyapplist", "com.tsng.hidemyroot", "me.weishu.exp", "top.canyie.dreamland.manager")
     )
 
-    // libdu sub_c36e8 (QgA): su binaries
+    // libdu sub_c36e8 (QgA): stat'ed su paths; then `which su`
     private val SU_PATHS = listOf(
-        "/system/app/SuperUser/SuperUser.apk", "/system/sd/xbin/su",
-        "/system/bin/su", "/system/xbin/su", "/sbin/su", "/system/su"
+        "/system/bin/su", "/system/xbin/su", "/system/sbin/su", "/sbin/su", "/vendor/bin/su", "/su/bin/su",
+        "/system/sd/xbin/su", "/data/local/su", "/su", "/data/local/xbin/su", "/data/local/bin/su",
+        "/system/bin/failsafe/su", "/system/bin/.ext/su", "/system/usr/we-need-root/su", "/dev/su", "/system/bin/.ext/.su",
+        "/system/etc/.installed_su_daemon", "/system/etc/.has_su_daemon", "/system/xbin/sugote", "/system/xbin/sugote-mksh",
+        "/system/xbin/supolicy", "/system/etc/init.d/99SuperSUDaemon", "/system/.supersu", "/product/bin/su",
+        "/apex/com.android.runtime/bin/su", "/apex/com.android.art/bin/su", "/system_ext/bin/su", "/system/xbin/bstk/su",
+        "/system/app/SuperUser/SuperUser.apk", "/system/app/Superuser.apk", "/odm/bin/su", "/vendor/xbin/su", "/cache/su",
+        "/data/su", "/system/bin/cph_su", "/dev/com.koushikdutta.superuser.daemon", "/system/xbin/daemonsu", "/sbin/.mianju",
+        "/sbin/nvsu", "/system/bin/.hid/su", "/system/addon.d/99-magisk.sh"
     )
+
+    // libdu sub_cfdc8 (90P, first digit): Magisk / LSPosed / EdXposed / Taichi / Dreamland / Xposed files
+    private val FRAMEWORK_FILES = listOf(
+        "/sbin/.magisk", "/sbin/magiskinit", "/sbin/magisk", "/system/bin/magisk", "/sbin/.magisk/modules/riru_lsposed",
+        "/data/adb/lspd", "/sbin/.magisk/modules/zygisk_lsposed", "/sbin/.magisk/modules/riru_edxposed",
+        "/data/misc/riru/modules/edxp", "/data/adb/riru/modules/edxp.prop", "/sbin/.magisk/modules/taichi", "/data/misc/taichi",
+        "/sbin/.magisk/modules/dreamland", "/data/misc/riru/modules/dreamland", "/data/adb/riru/modules/dreamland",
+        "/system/bin/app_process.orig", "/system/xposed.prop", "/system/framework/XposedBridge.jar",
+        "/system/bin/app_process_zposed", "/system/framework/ZposedBridge.jar", "/system/lib/libxposed_art.so",
+        "/cache/.disable_magisk", "/dev/magisk/img", "/cache/magisk.log", "/data/adb/magisk", "/system/etc/init/magisk",
+        "/system/etc/init/magisk.rc", "/data/magisk.apk"
+    )
+
+    // libdu sub_d96ec (Chh): virtual-camera files in the camera folder
+    private val VCAM_FILES = listOf("disable.jpg", "no-silent.jpg", "no_toast.jpg", "private_dir.jpg", "force_show.jpg", "1000.bmp", "virtual.mp4")
 
     // libdu sub_d8e1c (5mZ): TLS methods that turn native when hooked, one bit each
     private val SSL_METHODS = listOf(
@@ -311,17 +334,17 @@ object DuClient {
             // environment checks, with the safe value of each
             // settingsGlobal(ctx, "adb_enabled")?.let { put("c2O", it) } // "0"
             // settingsGlobal(ctx, "stay_on_while_plugged_in")?.let { put("PV8", it) } // "0"
-            // put("LAh", checkHookStatus(ctx)) // "11111111"
-            // put("90P", checkMounts(ctx)) // "11"
+            // put("LAh", DuCodec.enc(checkHookStatus(ctx), p)) // "00000000"
+            // put("90P", DuCodec.enc(checkFrameworks(), p)) // "00"
             // put("bzt", checkTelephonyHook()) // "0000"
-            // put("Xl9", checkMaps()) // "0000"
+            // put("Xl9", checkVirtualCamera()) // "0000"
             // put("qH9", checkDataDir(ctx)) // "0"
             // put("wlM", usbState(ctx)) // 0
             // put("QVn", permissionMask(ctx)) // 0
             // put("nur", if (hasAnyPackage(ctx, CLICKER_PACKAGES)) 1 else 0) // 0
             // put("tth", if (hasAnyPackage(ctx, ROOT_PACKAGES)) 1 else 0) // 0
             // put("QgA", checkSu()) // 0
-            // put("Chh", if (runCatching { File("/storage/emulated/0/Android/data").canRead() }.getOrDefault(false)) 1 else 0) // 0
+            // put("Chh", checkCameraFolder()) // 0
             // put("D32", checkCameraHook()) // 0
             // put("0KQ", checkTrustManager()) // 0
             // put("5mZ", checkSslHook()) // 0
@@ -662,36 +685,40 @@ object DuClient {
         }.getOrDefault(0)
     }
 
+    // libdu's "is it installed": getApplicationIcon doesn't throw NameNotFoundException
+    private fun installed(pm: PackageManager, pkg: String) = runCatching { pm.getApplicationIcon(pkg) }.isSuccess
+
     // libdu sub_cd32c / sub_cd8ac (nur / tth): any of the packages installed
-    private fun hasAnyPackage(ctx: Context, pkgs: List<String>): Boolean {
-        val pm = ctx.packageManager
-        return pkgs.any { runCatching { pm.getPackageInfo(it, 0) }.isSuccess }
+    private fun hasAnyPackage(ctx: Context, pkgs: List<String>): Boolean = pkgs.any { installed(ctx.packageManager, it) }
+
+    // libdu sub_cec90 (LAh): per HOOK_GROUPS group, '1' when one of its packages is installed
+    private fun checkHookStatus(ctx: Context): String =
+        HOOK_GROUPS.joinToString("") { g -> if (g.any { installed(ctx.packageManager, it) }) "1" else "0" }
+
+    // libdu sub_cfcfc (90P): '1' when a FRAMEWORK_FILES path exists (sub_cfdc8) or /proc/mounts names magisk (sub_cd1ac);
+    // shortcut: the second digit stayed '0' in every harness run and its source is unknown, so it is always '0'
+    private fun checkFrameworks(): String {
+        val files = FRAMEWORK_FILES.any { File(it).exists() }
+        val mounts = runCatching { File("/proc/mounts").readText().contains("magisk") }.getOrDefault(false)
+        return "${if (files || mounts) '1' else '0'}0"
     }
 
-    // libdu sub_ce2e4 (LAh): per HOOK_GROUPS group, '0' when one of its packages is installed
-    private fun checkHookStatus(ctx: Context): String {
-        val pm = ctx.packageManager
-        return HOOK_GROUPS.map { g -> if (g.any { runCatching { pm.getPackageInfo(it, 0) }.isSuccess }) '0' else '1' }.joinToString("")
+    // libdu sub_d9980 (Xl9): /proc/self/maps names "sandyz" / "virtualcam", some app's Android/data/<pkg>/cache holds
+    // stream.txt / virtual.mp4; one digit each
+    private fun checkVirtualCamera(): String {
+        val maps = runCatching { File("/proc/self/maps").readText() }.getOrDefault("")
+        val apps = File("/storage/emulated/0/Android/data").list().orEmpty()
+        fun anyCache(name: String) = apps.any { File("/storage/emulated/0/Android/data/$it/cache/$name").exists() }
+        return listOf("sandyz" in maps, "virtualcam" in maps, anyCache("stream.txt"), anyCache("virtual.mp4"))
+            .joinToString("") { if (it) "1" else "0" }
     }
 
-    // libdu sub_cfcfc (90P): '0' for a magisk mount, then '0' for an unreadable APK
-    private fun checkMounts(ctx: Context): String {
-        val hasMagisk = runCatching {
-            listOf("/proc/self/mountinfo", "/proc/mounts").firstNotNullOf { runCatching { File(it).readLines() }.getOrNull() }
-                .any { it.contains("magisk", true) }
-        }.getOrDefault(false)
-        val apkOk = runCatching { File(ctx.applicationInfo.publicSourceDir).length() > 0 }.getOrDefault(true)
-        return "${if (hasMagisk) '0' else '1'}${if (apkOk) '1' else '0'}"
-    }
-
-    // libdu sub_d9980 (Xl9): "0001" when /proc/self/maps names xposed or frida
-    private fun checkMaps(): String {
-        return runCatching {
-            val hasHook = File("/proc/self/maps").bufferedReader().useLines { lines ->
-                lines.any { it.contains("xposed", true) || it.contains("frida", true) }
-            }
-            if (hasHook) "0001" else "0000"
-        }.getOrDefault("0000")
+    // libdu sub_d96ec (Chh): 1 when DCIM/Camera1 holds a VCAM_FILES file or some app has files/Camera1/virtual.mp4
+    private fun checkCameraFolder(): Int {
+        val dcim = listOf("/storage/emulated/0/DCIM/Camera1", "/sdcard/DCIM/Camera1").any { d -> VCAM_FILES.any { File("$d/$it").exists() } }
+        val apps = File("/storage/emulated/0/Android/data").list().orEmpty()
+            .any { File("/storage/emulated/0/Android/data/$it/files/Camera1/virtual.mp4").exists() }
+        return if (dcim || apps) 1 else 0
     }
 
     // libdu sub_972a0 (qH9): "1" when the parent of our data dir can be listed (only outside the normal app sandbox)
@@ -702,9 +729,11 @@ object DuClient {
         }.getOrDefault("0")
     }
 
-    // libdu sub_c36e8 (QgA): a su binary exists
+    // libdu sub_c36e8 (QgA): a SU_PATHS path exists, or `which su` names one
     private fun checkSu(): Int {
-        return if (SU_PATHS.any { File(it).exists() }) 1 else 0
+        if (SU_PATHS.any { File(it).exists() }) return 1
+        val which = runCatching { Runtime.getRuntime().exec(arrayOf("which", "su")).inputStream.bufferedReader().readLine() }.getOrNull()
+        return if (!which.isNullOrBlank() && File(which.trim()).exists()) 1 else 0
     }
 
     // libdu sub_d8e1c (5mZ): SSL_METHODS bits set for methods that are native (hooked)

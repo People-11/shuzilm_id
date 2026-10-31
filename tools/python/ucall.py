@@ -1,13 +1,15 @@
 # Call one libdu function under unicorn with Python stubs for libc and for chosen internal functions.
+# Reads sample/libdu.so (env LIBDU overrides).
 # import ucall; u = ucall.U(); u.stub(0x4adb4, lambda u: u.cstr_new("02:11:22:33:44:55")); u.call(0x4afb4, 1, 2)
-import re, struct
+import re, struct, sys
 from unicorn import Uc, UC_ARCH_ARM64, UC_MODE_ARM, UC_HOOK_CODE, UcError
 from unicorn.arm64_const import *
 
 import os
 _HERE = os.path.dirname(os.path.abspath(__file__))
 SO = os.environ.get('LIBDU', os.path.join(_HERE, '..', '..', 'sample', 'libdu.so'))
-RELOCS = os.environ.get('RELOCS', os.path.join(_HERE, '..', 'data', 'relocs.txt'))
+sys.path.insert(0, _HERE)
+import elf
 BASE, IMG = 0, 0x200000
 STUBS, HEAP, STACK, TLS = 0x10000000, 0x20000000, 0x30000000, 0x40000000
 
@@ -21,15 +23,10 @@ class U:
         for i in range(phnum):
             t, fl, off, va, pa, fsz, msz, al = struct.unpack_from('<IIQQQQQQ', data, phoff + i * 56)
             if t == 1: s.uc.mem_write(va, data[off:off + fsz])
-        s.relative, s.plt = {}, {}
-        for line in open(RELOCS):
-            m = re.match(r'\s*([0-9a-f]+)\s+[0-9a-f]+\s+R_AARCH64_RELATIVE\s+([0-9a-f]+)', line)
-            if m: s.uc.mem_write(int(m.group(1), 16), struct.pack('<Q', int(m.group(2), 16)))
-            m = re.match(r'\s*([0-9a-f]+)\s+[0-9a-f]+\s+R_AARCH64_(JUMP_SLOT|GLOB_DAT)\s+([0-9a-f]+) (\S+)', line)
-            if m:
-                slot, val, name = int(m.group(1), 16), int(m.group(3), 16), m.group(4).split('@')[0]
-                if m.group(2) == 'GLOB_DAT' and val: s.uc.mem_write(slot, struct.pack('<Q', val))
-                elif m.group(2) == 'JUMP_SLOT': s.plt[slot] = name
+        for slot, target in elf.relative(data).items(): s.uc.mem_write(slot, struct.pack('<Q', target))
+        for slot, (value, _) in elf.globdat(data).items():
+            if value: s.uc.mem_write(slot, struct.pack('<Q', value))
+        s.plt = elf.plt(data)
         s.uc.mem_map(STUBS, 0x100000); s.uc.mem_map(HEAP, 0x1000000); s.uc.mem_map(STACK, 0x100000); s.uc.mem_map(TLS, 0x1000)
         s.uc.reg_write(UC_ARM64_REG_TPIDR_EL0, TLS)
         s.heap = HEAP; s.handlers = {}; s.trace = []

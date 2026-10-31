@@ -1,23 +1,21 @@
-# usage: deflat.py <libdu.so> <relocs.txt> <func_hex> <end_hex> <state_reg> <dispatch_hex,...> [--dot]
+# usage: deflat.py <libdu.so> <func_hex> <end_hex> <state_reg> <dispatch_hex,...> [--dot]
 # Recovers the state machine of an OLLVM-flattened function. Each state value is walked through the dispatcher's
 # compare tree by a small interpreter (constants in w/x registers, flags from cmp/tst), then on into its handler until
 # control comes back to a dispatcher entry; the state register there is the successor. Unknown conditions fork, and
 # the fork records what it depended on (a call result, a stack slot). OLLVM's bogus predicates read two globals
 # (x*(x-1) even || y < 10); those loads are taken as 0, which makes them pick the real edge.
-import sys, re
+import sys, re, os
+sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+import elf
 from capstone import Cs, CS_ARCH_ARM64, CS_MODE_ARM
 from capstone.arm64 import ARM64_OP_IMM, ARM64_OP_REG, ARM64_OP_MEM
 
 data = open(sys.argv[1], 'rb').read()
-got = {}
-for line in open(sys.argv[2]):
-    m = re.match(r'\s*([0-9a-f]+)\s+[0-9a-f]+\s+R_AARCH64_RELATIVE\s+([0-9a-f]+)', line)
-    if m: got[int(m.group(1), 16)] = int(m.group(2), 16)
-    m = re.match(r'\s*([0-9a-f]+)\s+[0-9a-f]+\s+R_AARCH64_GLOB_DAT\s+([0-9a-f]+) (x|y)(\.\d+)? ', line)
-    if m: got[int(m.group(1), 16)] = int(m.group(2), 16)  # OLLVM's opaque-predicate globals
-FUNC, END = int(sys.argv[3], 16), int(sys.argv[4], 16)
-SREG = sys.argv[5]
-if sys.argv[6] == 'auto':
+got = elf.relative(data)
+got.update({slot: v for slot, (v, name) in elf.globdat(data).items() if re.match(r'(x|y)(\.\d+)?$', name)})  # OLLVM's opaque-predicate globals
+FUNC, END = int(sys.argv[2], 16), int(sys.argv[3], 16)
+SREG = sys.argv[4]
+if sys.argv[5] == 'auto':
     # dispatcher = the most frequent target of unconditional branches; state reg = what it compares first
     import collections
     _md = Cs(CS_ARCH_ARM64, CS_MODE_ARM)
@@ -35,7 +33,7 @@ if sys.argv[6] == 'auto':
     DISPATCH = {tgt}
     print(f'# auto dispatcher {tgt:#x} state {SREG}')
 else:
-    DISPATCH = {int(a, 16) for a in sys.argv[6].split(',')}
+    DISPATCH = {int(a, 16) for a in sys.argv[5].split(',')}
 DEC = 0x1143bc
 NAMES = {0xf07fc: 'putMode', 0xf0378: 'putStr', 0xf220c: 'putInt', 0xf2160: 'putObj', 0xdc4cc: 'free', DEC: 'dec',
          0xf7cd8: 'callObj', 0xf5088: 'jstr2c', 0xf5348: 'delLocal', 0xf3274: 'prefGet', 0xedbfc: 'noPerm',
@@ -317,7 +315,7 @@ init = St()
 res = walk(init, FUNC)
 # keep the register environment at the dispatcher (callee-saved constants)
 INIT = {}
-for a in sys.argv[7:]:
+for a in sys.argv[6:]:
     if a.startswith('--set='):
         for kv in a[6:].split(','):
             k, v = kv.split('='); INIT[k] = int(v, 0)

@@ -15,10 +15,16 @@ class FakeFs implements IOResolver<AndroidFileIO> {
     static final String HOSTS = "127.0.0.1 localhost\n::1 ip6-localhost\n";
     // 203.0.113.0/24 is TEST-NET-3: resolution succeeds, nothing is ever reachable (HTTP itself is intercepted at the JNI layer)
     static final String HOSTS_RESOLVER = HOSTS + "203.0.113.10 auni.telecome.cn\n";
-    final Map<String, byte[]> files = new HashMap<>();
+    static final Map<String, byte[]> files = new HashMap<>(); // static: Emu's faccessat consults it too
 
     FakeFs() {
         put("/system/etc/hosts", HOSTS);
+        // FAKEFILE="path=content;path2=content" (a literal \n for a newline): extra files, e.g. a su binary or a frida
+        // line in /proc/self/maps
+        for (String kv : System.getenv().getOrDefault("FAKEFILE", "").split(";")) {
+            int i = kv.indexOf('=');
+            if (i > 0) put(kv.substring(0, i), kv.substring(i + 1).replace("\\n", "\n"));
+        }
     }
 
     void put(String path, String content) { files.put(path, content.getBytes(StandardCharsets.UTF_8)); }

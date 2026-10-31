@@ -1,0 +1,133 @@
+id	doc	kind	spec	scenario
+# --- 5.1 / 5.2 transport and encoding ---
+T1	5.1	read	text=NET URL "https://auni.telecome.cn/a/mdna/report?v=8.7&t=m&p=F9BD0FBDACFE80FCF34370FBCFEE1A98
+T2	5.1	read	text=/a/d2api/report?v=8.7&t=a&e=2|/a/dcc2/request?v=2.0&c=1&e=1|/a/audd/valid?v=1.0&t=uid1|/a/daa/report?v=1.1&c=1&e=1
+T3	5.1	read	text=&h=A4DEE27DDA534E1510509C74DC75A334	{"QUERIES": "2"}
+T4	5.2	str	func=sub_c6df0 strings=%ld.%ld
+T5	5.2	mode	key=dLH expect=enc
+T6	5.2	mode	key=yzW expect=enc
+T7	5.2	mode	key=6yY expect=raw
+T8	5.2	mode	key=YWu expect=raw
+T9	5.2	run	key=foO expect=dec:7be317f3baa70dd	{"ANDROID_ID": "7be317f3baa70ddb"}
+T10	5.2	run	key=foO expect=dec:7be317f3baa70db	{"ANDROID_ID": "7be317f3baa70ddb", "NS3": "281"}
+# --- 5.4 identity ---
+I1	5.4	run	key=6yY expect=re:^[0-9a-f]{64}$
+I2	5.4	read	text=MediaDrm->getPropertyByteArray(Ljava/lang/String;)[B args=["deviceUniqueId"
+I3	5.4	static	key=mIS source=sub_c6580 strings=/proc/sys/kernel/random/boot_id
+I4	5.4	static	key=v1X source=sub_ef3f8 strings=/sdcard/../../../../../../sdcard/.%s
+I5	5.4	static	key=p92 source=sub_a535c strings=getDeviceId|getImei|READ_PHONE_STATE
+I6	5.4	static	key=3J5 source=sub_a5544 strings=getImei
+I7	5.4	static	key=fM0 source=sub_4afb4
+# --- 5.4 files and hardware fingerprints ---
+F1	5.4	static	key=52J source=sub_cb304 strings=/sdcard|/system/lib64|/dev/block|/system/vendor
+F2	5.4	static	key=p1m source=sub_c046c strings=/sys/block/mmcblk0/device/serial
+F3	5.4	static	key=dJs source=sub_bb994 strings=/sys/block/mmcblk0/device/cid
+F4	5.4	static	key=GZY source=sub_c0558 strings=/sys/devices/soc0/serial_number
+F5	5.4	run	key=YWu expect=raw:127.0.0.1+localhost;::1+ip6-localhost;
+F6	5.4	leaf	func=sub_d82f4 log=fopen('/system/etc/hosts')
+F7	5.4	static	key=G8U source=sub_b19b4 strings=/proc/meminfo|MYA|H4S
+# --- 5.4 / sample/DuClient.kt: every key DuClient sends or lists is an mdna key ---
+D1	5.4	report	report=mdna keys=foO|sfOo|P1J|AYk|6yY|dLH|75c|DUv|3mS|AAA|BBB|UOv|2cO|R37|R3d|R41|SAN	
+D2	5.4	report	report=mdna keys=0KQ|4VP|52J|5Tv|5mZ|7S2|8tS|90P|AWo|B3k|Bos|Chh|D32|Db2|EV2|G8U|GVp|GZY|H4S|Hsz|IAI|IJK|J7w|JPd|K5f|KyU|LAh|LMi|MCN|PV8|QNw|QVn|Qg1|QgA|R53|R63|Ra|S6e|Xl9|YWu|ZZA|Zne|Zrs|aFw|bf7|bzt|c2O|cHo|custom|dJs|fPV|fxb|gEd|h6Z|h8h|iYB|iZS|ibF|mIS|mch|msg|ne8|nur|p1m|qH9|tth|txo|ura|w91|wSK|wlM|yzW|zpA	
+D3	5.4	report	report=mdna keys=2mV|dGh|kWV|nAt|ubF|w5v|wHp	{"QUERIES": "2", "RESP_JSON": "{\"err\":\"0\",\"n_a\":\"DU0000000000000000000000000000000000000000000000000000TEST\",\"aid\":\"AID_TEST\",\"o_a\":\"OA22222222222\",\"cdd\":\"CDD_TEST\",\"nctl\":\"1\",\"dlab\":\"WzFJYvZWimIjMrYoxsyItg==\"}"}
+D4	5.4	report	report=mdna keys=B5W|CQH|CVi|IeP|JCE|K4N|KjD|LhL|NZR|VcZ|dHR|dTr|fV5|hJ7|hiK|hpJ|mSa|mZF|oeH|vuS|xsh|za7	{"PREFS_SET": "asaid=v_asaid,suaid=v_suaid,mzaid=v_mzaid,nbaid=v_nbaid,gaid=v_gaid,hwaid=v_hwaid,hrid=v_hrid,laid=v_laid,voaid=v_voaid,opaid=v_opaid,sanl=v_sanl,xmid=v_xmid,onepid=v_onepid,mtid=v_mtid,zteid=v_zteid,fmid=v_fmid,ssuid=v_ssuid,pzid=v_pzid,cpid=v_cpid,ebkd=v_ebkd,exoid=v_exoid,otime=v_otime"}
+D5	5.4	report	report=mdna keys=Q23	{"USERCA": "user:87bc3517.0=CN=Test Root CA"}
+D6	5.4	report	report=mdna keys=3Ky|67I|9WL|AJU|GQd|OQE|R1e|R5a|VUZ|az6|dga|fez|i9d|pc4|wv6|ySX	{"PROPS": "net.hostname=myphone,gsm.operator.numeric=46000,bst.machine_id=BST1,nemud.player_uuid=U1,phone.mechineid=M1,ro.microvirt.hmac=H1,ro.droid4x.host.mac=D1,bst.config.machineId=B2,persist.nox.device_id=N1,sys.mac.address=S1,persist.nox.wifimac=W1,redf.mathinecode=R1,ro.boot.deviceid=X1,sys.usb.vserialno=V1,vmprop.androidid=A1,vmprop.ip=I1"}
+D7	5.4	report	report=mdna keys=9X9|MYA|dki|ozK	{"PROXY": "10.0.0.2:8888", "SUBTYPE": "LTE", "FAKEFILE": "/proc/meminfo=MemTotal:        7816412 kB\nMemFree:         1234567 kB\nMemAvailable:    3456789 kB\nBuffers:           12345 kB\nCached:          2345678 kB\n"}
+D8	5.4	report	report=mdna keys=3k9|8N4	{"PREFS_SET": "fut=RkFBNDhBRjA1RTcxRTk3RkFERTg0OTdGMDFBMkJEREYxNzAwMDAwMDAwMDAw,boot_times=RUNDQkM4N0U0QjVDRTJGRTI4MzA4RkQ5RjJBN0JBRjMz,n_a=RUQ4NjIzREQ0MzE0NjdBMUNGNjNCRENFMDAyOERFM0JEVTExMTExMTExMTExMTExMTExMTExMTExMTExMTExMTExMTExMTExMTExMTExMTExMTExMTFPTEQx"}
+D9	5.4	static	key=3J5 source=sub_a5544 builder=sub_68f9c
+D10	5.4	static	key=p92 source=sub_a535c builder=sub_68f9c
+D11	5.4	static	key=LkB builder=sub_68f9c
+D12	5.4	static	key=IOe source=sub_af71c builder=sub_68f9c
+D13	5.4	static	key=q6I source=sub_af6e0 builder=sub_68f9c
+D14	5.4	static	key=41j source=sub_4adb4 builder=sub_68f9c
+D15	5.4	static	key=nyx source=sub_c2198 builder=sub_68f9c
+D16	5.4	static	key=M96 source=sub_c21b8 builder=sub_68f9c
+D17	5.4	static	key=fM0 source=sub_4afb4 builder=sub_68f9c
+D18	5.4	static	key=v1X source=sub_ef3f8 builder=sub_68f9c
+D19	5.4	static	key=zvW source=sub_c8934 builder=sub_68f9c
+# --- 5.5 environment checks ---
+E1	5.5	run	key=tth expect=raw:0
+E2	5.5	run	key=tth expect=raw:1	{"INSTALLED": "eu.chainfire.supersu"}
+E3	5.5	read	text=getApplicationIcon(Ljava/lang/String;)Landroid/graphics/drawable/Drawable; args=["me.weishu.kernelsu"
+E4	5.5	leaf	func=sub_c36e8 log=stat('/system/xbin/su')|stat('/sbin/su')|stat('/apex/com.android.art/bin/su')|popen('which su')
+E5	5.5	run	key=QgA expect=raw:1	{"FAKEFILE": "/system/xbin/su=x"}
+E6	5.5	leaf	func=sub_cfdc8 log=access('/sbin/.magisk')|access('/data/adb/lspd')|access('/system/framework/XposedBridge.jar')
+E7	5.5	leaf	func=sub_cd1ac log=fopen('/proc/mounts')|strstr('magisk')
+E8	5.5	mode	key=90P expect=enc
+E9	5.5	run	key=90P expect=dec:00
+E10	5.5	run	key=90P expect=dec:10	{"FAKEFILE": "/sbin/.magisk=x"}
+E11	5.5	run	key=90P expect=dec:10	{"FAKEFILE": "/proc/mounts=magisk /sbin tmpfs rw 0 0\\n"}
+E12	5.5	mode	key=LAh expect=enc
+E13	5.5	run	key=LAh expect=dec:00000000
+E14	5.5	run	key=LAh expect=dec:10000000	{"INSTALLED": "com.topjohnwu.magisk"}
+E15	5.5	run	key=LAh expect=dec:01000000	{"INSTALLED": "de.robv.android.xposed.installer"}
+E16	5.5	run	key=LAh expect=dec:00100000	{"INSTALLED": "io.va.exposed"}
+E17	5.5	run	key=LAh expect=dec:00010000	{"INSTALLED": "org.lsposed.manager"}
+E18	5.5	run	key=LAh expect=dec:00001000	{"INSTALLED": "com.saurik.substrate"}
+E19	5.5	run	key=LAh expect=dec:00000100	{"INSTALLED": "moe.shizuku.privileged.api"}
+E20	5.5	run	key=LAh expect=dec:00000010	{"INSTALLED": "com.yztc.studio.plugin"}
+E21	5.5	run	key=LAh expect=dec:00000001	{"INSTALLED": "com.tsng.hidemyapplist"}
+E22	5.5	leaf	func=sub_d9980 log=fopen('/proc/self/maps')|strstr('sandyz')|strstr('virtualcam')|/cache/stream.txt|/cache/virtual.mp4
+E23	5.5	mode	key=Xl9 expect=raw
+E24	5.5	run	key=Xl9 expect=raw:1000	{"FAKEFILE": "/proc/self/maps=7f-80 r-xp 0 0:0 0 /data/app/sandyz.so\\n"}
+E25	5.5	run	key=Xl9 expect=raw:0100	{"FAKEFILE": "/proc/self/maps=7f-80 r-xp 0 0:0 0 /data/app/virtualcam.so\\n"}
+E26	5.5	run	key=Xl9 expect=raw:0000	{"FAKEFILE": "/proc/self/maps=7f-80 r-xp 0 0:0 0 /data/local/tmp/frida-agent-64.so\\n"}
+E27	5.5	leaf	func=sub_d96ec log=access('/storage/emulated/0/DCIM/Camera1/virtual.mp4')|access('/storage/emulated/0/DCIM/Camera1/disable.jpg')|/files/Camera1/virtual.mp4
+E28	5.5	run	key=Chh expect=raw:1	{"FAKEFILE": "/storage/emulated/0/DCIM/Camera1/virtual.mp4=x"}
+E29	5.5	leaf	func=sub_cb96c log=strstr('frida')|strstr('lspd')|strstr('riru')|opendir('/proc/self/task')|opendir('/proc/self/fd')
+E30	5.5	run	key=zc7 expect=raw:0001
+E31	5.5	run	key=zc7 expect=raw:0101	{"FAKEFILE": "/proc/self/maps=7f-80 r-xp 0 0:0 0 /data/local/tmp/frida-agent-64.so\\n"}
+E32	5.5	run	key=zc7 expect=raw:1001	{"FAKEFILE": "/proc/self/maps=7f-80 r-xp 0 0:0 0 /system/framework/XposedBridge.jar\\n"}
+E33	5.5	run	key=zc7 expect=raw:0011	{"FAKEFILE": "/data/adb/lspd=x"}
+E34	5.5	run	key=iZS expect=raw:4321	{"FAKEFILE": "/proc/self/status=Name:\\tcom.coolapk.market\\nTracerPid:\\t4321\\n"}
+E35	5.5	run	key=bzt expect=raw:0100	{"NATIVE": "android.telephony.TelephonyManager#getImei"}
+E36	5.5	run	key=D32 expect=raw:4	{"NATIVE": "android.hardware.Camera#startPreview"}
+E37	5.5	run	key=5mZ expect=raw:16	{"NATIVE": "javax.net.ssl.SSLContext#init"}
+E38	5.5	read	text=TrustManagerFactory->getTrustManagers()
+E39	5.5	run	key=ZZA expect=raw:1	{"FAKEFILE": "/sys/class/net/tun0=x"}
+E40	5.5	run	key=nur expect=raw:1	{"INSTALLED": "org.autojs.autojs"}
+E41	5.5	run	key=yzW expect=dec:com.example.clicker,
+E42	5.5	static	key=Q23 source=sub_d7dd4 strings=AndroidCAStore
+E43	5.5	read	text=Settings$Global->getString(Landroid/content/ContentResolver;Ljava/lang/String;)Ljava/lang/String; args=[android/content/ContentResolver{cr}, "adb_enabled"
+E44	5.5	leaf	func=sub_972a0 log=snprintf('%s/..')|opendir(
+E45	5.5	str	func=sub_9200c strings=android.permission.ACCESS_COARSE_LOCATION|android.permission.ACCESS_FINE_LOCATION|android.permission.NEARBY_WIFI_DEVICES|android.permission.READ_PHONE_STATE
+# --- 5.6 follow-up reports ---
+A1	5.6	static	key=mbU source=sub_ac650 strings=com.tencent.mm|com.eg.android.AlipayGphone|com.tencent.mobileqq|%ld,%ld,%ld
+A2	5.6	run	key=mbU expect=absent
+A3	5.6	run	key=mbU expect=dec:1760000000000,1760000000000,1760000000000	{"INSTALLED": "com.tencent.mm,com.eg.android.AlipayGphone,com.tencent.mobileqq"}
+A4	5.6	static	key=ZQM source=sub_ac768 strings=com.tencent.mm
+A5	5.6	run	key=ZQM expect=dre:base\.apk$	{"INSTALLED": "com.tencent.mm"}
+A6	5.6	static	key=T2t source=sub_acd98 strings=getInstallerPackageName
+A7	5.6	static	key=6PH source=sub_92540 strings=/proc/net/tcp|/proc/net/tcp6|/proc/net/udp|/proc/net/udp6
+A8	5.6	static	key=OW2 source=sub_d9e00 strings=grep u0_a%d
+A9	5.6	static	key=9P6 source=sub_c2740 strings=ip neigh
+A10	5.6	leaf	func=sub_c2740 log=popen('ip neigh')
+A11	5.6	static	key=Dg1 source=sub_b4754 strings=ACCESS_COARSE_LOCATION
+A12	5.6	static	key=jK5 source=sub_b2668 strings=getBSSID
+A13	5.6	static	key=Ufi source=sub_ba150 strings=BLUETOOTH_CONNECT
+A14	5.6	static	key=dj3 source=sub_a6438 strings=READ_PHONE_STATE
+A15	5.6	static	key=Yko source=sub_a62ac strings=getSubscriberId
+A16	5.6	static	key=kYm source=sub_c6980 strings=/proc/sys/kernel/osrelease|/proc/version|uname -a
+A17	5.6	static	key=IHa source=sub_b137c strings=getDefaultUserAgent
+A18	5.6	static	key=8ET source=sub_a3250 strings=getGnssHardwareModelName
+A19	5.6	static	key=oJI source=sub_adaf8 strings=getSensorList
+A20	5.6	static	key=z4m source=sub_af07c strings=enabled_accessibility_services
+A21	5.6	run	key=fej expect=raw:1,1,-1
+# --- 5.7 other SDKs' ids and cross-app ids ---
+X1	5.7	static	key=tbA source=sub_af040 strings=com.baidu.deviceid
+X2	5.7	static	key=ZCk source=sub_aee88 strings=com.shumei.deviceid
+X3	5.7	static	key=e4U source=sub_aefc8 strings=mqBRboGZkQPcAkyk
+X4	5.7	static	key=F9K source=sub_af004 strings=dxCRMxhQkdGePGnp
+X5	5.7	read	text=Settings$System->getString(Landroid/content/ContentResolver;Ljava/lang/String;)Ljava/lang/String; args=[android/content/ContentResolver{cr}, "com.baidu.deviceid"|"com.shumei.deviceid"|"mqBRboGZkQPcAkyk"
+X6	5.7	read	text=getSharedPreferences(Ljava/lang/String;I)Landroid/content/SharedPreferences; args=["embed_applog_stats"|args=["ttopenadsdk"|getDatabasePath(Ljava/lang/String;)Ljava/io/File; args=["zx.db"
+X7	5.7	read	text=path=/sdcard/../../../../../../sdcard/..ccvid|path=/sdcard/../../../../../../sdcard/Android/ZHVzY2Lk
+X8	5.7	str	func=sub_ef53c strings=mkdir |echo %s > /sdcard/../../../../../../sdcard/.%s|echo %s > /sdcard/../../../../../../sdcard/Android/Data/System/local/%s
+X9	5.7	str	func=sub_ef8ac strings=echo %s > /sdcard/../../../../../../sdcard/Android/%s
+X10	5.7	str	func=sub_11f7f0 strings=o_a|nsci|sci
+X11	5.7	str	func=sub_b114c strings=android/provider/Settings$System|putString
+X12	5.7	str	func=sub_b1274 strings=android.permission.WRITE_SETTINGS
+X13	5.7	call	func=sub_11f7f0 callee=sub_b1274 arg=ZHVzY2Lk
+X14	5.7	call	func=sub_11f7f0 callee=sub_b1274 arg=duscid
+X15	5.7	str	func=sub_b10b4 strings=android.permission.WRITE_SETTINGS|dxCRMxhQDPkdGePG
+X16	5.7	read	text=Settings$System->getString(Landroid/content/ContentResolver;Ljava/lang/String;)Ljava/lang/String; args=[android/content/ContentResolver{cr}, "duscid"

@@ -6,3 +6,8 @@ tools/harness/unidbg.log
 tools/harness/*.der
 __pycache__/
 *.pyc
+# generated on demand by the scripts (docs/04-tools.md), never committed
+tools/harness/funcs.txt
+tools/harness/*.tsv
+tools/harness/payload_*.json
+/*.tsv

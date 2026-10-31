@@ -68,7 +68,7 @@ final class AndroidFakes {
         m.put("java/io/File->getPath()Ljava/lang/String;", (s, a) -> String.valueOf(s.getValue()));
         m.put("java/io/File->exists()Z", (s, a) -> true);
         m.put("java/io/File->mkdirs()Z", (s, a) -> true);
-        m.put("java/io/File->length()J", (s, a) -> 0L);
+        m.put("java/io/File->length()J", (s, a) -> { byte[] f = FakeFs.files.get(String.valueOf(s.getValue())); return f == null ? 0L : (long) f.length; });
 
         // System
         m.put("java/lang/System->currentTimeMillis()J", (s, a) -> System.currentTimeMillis());
@@ -123,12 +123,16 @@ final class AndroidFakes {
 
         // Not installed: real PackageManager throws NameNotFoundException (libdu treats any non-null result as "installed")
         Bridge.Handler notFound = (s, a) -> { vm.throwException(vm.resolveClass("android/content/pm/PackageManager$NameNotFoundException").newObject(null)); return null; };
-        m.put("android/content/pm/PackageManager->getApplicationIcon(Ljava/lang/String;)Landroid/graphics/drawable/Drawable;", notFound);
+        // INSTALLED="pkg1,pkg2": other packages that look installed (same fake PackageInfo / ApplicationInfo as ours)
+        java.util.Set<String> installed = new java.util.HashSet<>(java.util.List.of(System.getenv().getOrDefault("INSTALLED", "").split(",")));
+        installed.add(Harness.PKG);
+        m.put("android/content/pm/PackageManager->getApplicationIcon(Ljava/lang/String;)Landroid/graphics/drawable/Drawable;", (s, a) ->
+                installed.contains(((StringObject) a[0]).getValue()) ? h.obj("android/graphics/drawable/Drawable", "icon") : notFound.handle(s, a));
         m.put("android/content/pm/PackageManager->getPackageInfo(Ljava/lang/String;I)Landroid/content/pm/PackageInfo;", (s, a) -> {
             String pkg = ((StringObject) a[0]).getValue();
-            return Harness.PKG.equals(pkg) ? h.obj("android/content/pm/PackageInfo", pkg) : notFound.handle(s, a); });
+            return installed.contains(pkg) ? h.obj("android/content/pm/PackageInfo", pkg) : notFound.handle(s, a); });
         m.put("android/content/pm/PackageManager->getApplicationInfo(Ljava/lang/String;I)Landroid/content/pm/ApplicationInfo;", (s, a) ->
-                Harness.PKG.equals(((StringObject) a[0]).getValue()) ? h.obj("android/content/pm/ApplicationInfo", "appinfo") : notFound.handle(s, a));
+                installed.contains(((StringObject) a[0]).getValue()) ? h.obj("android/content/pm/ApplicationInfo", "appinfo") : notFound.handle(s, a));
 
         // --- Signing certificate: the real Coolapk v2 cert (coolapk_cert.der) ---
         byte[] cert;
@@ -166,7 +170,14 @@ final class AndroidFakes {
         m.put("java/lang/ClassLoader->loadClass(Ljava/lang/String;)Ljava/lang/Class;", (s, a) -> vm.resolveClass(((StringObject) a[0]).getValue().replace('.', '/')));
         m.put("java/lang/Class->getName()Ljava/lang/String;", (s, a) -> ((DvmClass) s).getClassName().replace('/', '.'));
         m.put("java/lang/Class->getSimpleName()Ljava/lang/String;", (s, a) -> { String n = ((DvmClass) s).getClassName(); return n.substring(n.lastIndexOf('/') + 1); });
-        m.put("java/lang/Class->getDeclaredMethods()[Ljava/lang/reflect/Method;", (s, a) -> new com.github.unidbg.linux.android.dvm.array.ArrayObject());
+        // NATIVE="android.telephony.TelephonyManager#getImei,...": reflection sees these methods as native (as a hook leaves them)
+        java.util.List<String> natives = java.util.List.of(System.getenv().getOrDefault("NATIVE", "").split(","));
+        m.put("java/lang/Class->getDeclaredMethods()[Ljava/lang/reflect/Method;", (s, a) -> {
+            String cls = s instanceof DvmClass c ? c.getClassName().replace('/', '.') : "";
+            return new com.github.unidbg.linux.android.dvm.array.ArrayObject(natives.stream().filter(n -> n.startsWith(cls + "#"))
+                    .map(n -> h.obj("java/lang/reflect/Method", n)).toArray(DvmObject[]::new)); });
+        m.put("java/lang/reflect/Method->getName()Ljava/lang/String;", (s, a) -> String.valueOf(s.getValue()).substring(String.valueOf(s.getValue()).indexOf('#') + 1));
+        m.put("java/lang/reflect/Method->getModifiers()I", (s, a) -> 0x101); // public native
         m.put("java/lang/Class->getDeclaredFields()[Ljava/lang/reflect/Field;", (s, a) -> new com.github.unidbg.linux.android.dvm.array.ArrayObject());
         m.put("java/lang/Class->getClassLoader()Ljava/lang/ClassLoader;", (s, a) -> h.obj("dalvik/system/PathClassLoader", "app-loader"));
         m.put("java/lang/reflect/Proxy->isProxyClass(Ljava/lang/Class;)Z", (s, a) -> false);
@@ -182,7 +193,17 @@ final class AndroidFakes {
                 new com.github.unidbg.linux.android.dvm.array.ArrayObject(h.obj("android/security/net/config/RootTrustManager", "tm")));
         m.put("java/security/KeyStore->getInstance(Ljava/lang/String;)Ljava/security/KeyStore;", (s, a) -> h.obj("java/security/KeyStore", ((StringObject) a[0]).getValue()));
         m.put("java/security/KeyStore->load(Ljava/security/KeyStore$LoadStoreParameter;)V", (s, a) -> null);
-        m.put("java/security/KeyStore->aliases()Ljava/util/Enumeration;", (s, a) -> h.obj("java/util/Collections$EmptyEnumeration", java.util.Collections.emptyEnumeration()));
+        // USERCA="alias=issuer,...": user-installed CA certificates in AndroidCAStore (aliases start with "user:")
+        java.util.Map<String, String> userCa = new java.util.LinkedHashMap<>();
+        for (String kv : System.getenv().getOrDefault("USERCA", "").split(",")) if (kv.contains("=")) userCa.put(kv.substring(0, kv.indexOf('=')), kv.substring(kv.indexOf('=') + 1));
+        m.put("java/security/KeyStore->aliases()Ljava/util/Enumeration;", (s, a) -> h.obj("java/util/Enumeration",
+                java.util.Collections.enumeration("AndroidCAStore".equals(s.getValue()) ? userCa.keySet() : java.util.List.<String>of())));
+        m.put("java/util/Enumeration->hasMoreElements()Z", (s, a) -> ((java.util.Enumeration<?>) s.getValue()).hasMoreElements());
+        m.put("java/util/Enumeration->nextElement()Ljava/lang/Object;", (s, a) -> String.valueOf(((java.util.Enumeration<?>) s.getValue()).nextElement()));
+        m.put("java/security/KeyStore->getCertificate(Ljava/lang/String;)Ljava/security/cert/Certificate;", (s, a) ->
+                h.obj("java/security/cert/X509Certificate", userCa.getOrDefault(((StringObject) a[0]).getValue(), "")));
+        m.put("java/security/cert/X509Certificate->getIssuerDN()Ljava/security/Principal;", (s, a) -> h.obj("java/security/Principal", s.getValue()));
+        m.put("java/security/Principal->getName()Ljava/lang/String;", (s, a) -> String.valueOf(s.getValue()));
 
         // --- Network: capture, never send ---
         m.put("java/net/URL-><init>(Ljava/lang/String;)V", (s, a) -> { h.br.trace.println("NET URL " + Bridge.show(a[0])); return h.obj("java/net/URL", ((StringObject) a[0]).getValue()); });

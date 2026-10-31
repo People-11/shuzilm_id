@@ -26,6 +26,11 @@ class Emu extends AndroidARM64Emulator {
         return new String(raw, 0, n, java.nio.charset.StandardCharsets.ISO_8859_1);
     }
 
+    // fstatat/readlinkat on "/proc/self/fd/" style paths: unidbg parseInt("") -> NumberFormatException, so -ENOENT
+    static Long badFdPath(String pth) {
+        return pth.matches("/proc/(self|\\d+)/fd/.*") && !pth.matches("/proc/(self|\\d+)/fd/\\d+") ? Long.valueOf(-2L) : null;
+    }
+
     @Override
     protected UnixSyscallHandler<AndroidFileIO> createSyscallHandler(SvcMemory svcMemory) {
         return new ARM64SyscallHandler(svcMemory) {
@@ -46,9 +51,19 @@ class Emu extends AndroidARM64Emulator {
                         String path = x1 == 0 ? null : cstr(backend, x1);
                         trace.printf("SYSCALL openat dirfd=%d path=%s flags=%#x%n", (int) x0, path, backend.reg_read(Arm64Const.UC_ARM64_REG_X2).longValue());
                     }
+                    if ((nr == 48 || nr == 79) && x1 != 0) trace.printf("SYSCALL %s path=%s%n", nr == 48 ? "faccessat" : "fstatat", cstr(backend, x1));
                     Long ret = switch (nr) {
                         // openat: NULL -> -EFAULT; paths unidbg's FilenameUtils.normalize() rejects ("/sdcard/../../..") NPE inside unidbg -> -ENOENT
                         case 56 -> x1 == 0 ? Long.valueOf(-14L) : org.apache.commons.io.FilenameUtils.normalize(cstr(backend, x1), true) == null ? Long.valueOf(-2L) : null;
+                        case 48 -> FakeFs.files.containsKey(cstr(backend, x1)) ? Long.valueOf(0L) : null; // faccessat: FAKEFILE paths exist
+                        case 79 -> {                             // fstatat: FAKEFILE paths are regular files (mode 0100755, their size)
+                            String pth = cstr(backend, x1);
+                            byte[] f = FakeFs.files.get(pth);
+                            if (f == null) yield badFdPath(pth);
+                            byte[] st = new byte[128];
+                            java.nio.ByteBuffer.wrap(st).order(java.nio.ByteOrder.LITTLE_ENDIAN).putInt(16, 0100755).putLong(48, f.length);
+                            backend.mem_write(backend.reg_read(Arm64Const.UC_ARM64_REG_X2).longValue(), st);
+                            yield 0L; }
                         case 176, 177 -> 10234L;                 // getgid / getegid -> app uid
                         case 158 -> 0L;                          // getgroups -> none
                         // socket: only TCP over AF_INET/6 (libdu's local-port lock) is left to unidbg; everything else -EACCES
@@ -60,9 +75,7 @@ class Emu extends AndroidARM64Emulator {
                             case 21 -> Long.valueOf(2L);         // PR_GET_SECCOMP: app processes run in filter mode
                             case 39 -> Long.valueOf(0L);         // PR_GET_NO_NEW_PRIVS: zygote has CAP_SYS_ADMIN, so 0
                             default -> null; };
-                        // fstatat/readlinkat on "/proc/self/fd/" style paths: unidbg parseInt("") -> NumberFormatException
-                        case 79, 78 -> { String pth = cstr(backend, x1);
-                                         yield pth.matches("/proc/(self|\\d+)/fd/.*") && !pth.matches("/proc/(self|\\d+)/fd/\\d+") ? Long.valueOf(-2L) : null; }
+                        case 78 -> badFdPath(cstr(backend, x1));
                         case 203 -> {                            // connect: never reach the outside world; log the target
                             long sa = x1; byte[] b = backend.mem_read(sa, 8);
                             int fam = (b[0] & 0xff) | (b[1] & 0xff) << 8, port = (b[2] & 0xff) << 8 | (b[3] & 0xff);

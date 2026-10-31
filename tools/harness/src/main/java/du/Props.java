@@ -42,5 +42,7 @@ final class Props {
         P.put("init.svc.adbd", "stopped");
         P.put("sys.usb.state", "mtp");
         P.put("net.hostname", "");
+        // PROPS="key=value,...": override / add properties (e.g. an emulator's bst.machine_id)
+        for (String kv : System.getenv().getOrDefault("PROPS", "").split(",")) if (kv.contains("=")) P.put(kv.substring(0, kv.indexOf('=')), kv.substring(kv.indexOf('=') + 1));
     }
 }

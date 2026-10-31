@@ -24,11 +24,11 @@ public class Harness {
     java.util.Map<String, java.util.Map<String, Object>> prefFiles;
     static final java.util.Set<Long> dumpStr = new java.util.HashSet<>(java.util.List.of(0x147214L));
 
-    /** Logs every entry into a known libdu function (starts from .eh_frame_hdr) with x0..x2. */
+    /** FNTRACE=<file of function starts, from elf.py funcs>: logs every entry into a libdu function with x0..x2. */
     void hookFunctions(PrintStream trace) {
         try {
             java.util.Set<Long> starts = new java.util.HashSet<>();
-            for (String l : java.nio.file.Files.readAllLines(java.nio.file.Path.of("../data/funcs.txt"))) starts.add(Long.decode(l.trim()));
+            for (String l : java.nio.file.Files.readAllLines(java.nio.file.Path.of(System.getenv("FNTRACE")))) starts.add(Long.decode(l.trim()));
             emu.getBackend().hook_add_new(new com.github.unidbg.arm.backend.BlockHook() {
                 @Override public void hookBlock(com.github.unidbg.arm.backend.Backend be, long address, int size, Object user) {
                     long off = address - base;

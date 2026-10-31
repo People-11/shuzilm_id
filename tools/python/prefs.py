@@ -1,15 +1,13 @@
 # usage: prefs.py trace.log -> the SDK's prefs at the end of the harness run, names un-hashed and values decoded
-import hashlib, base64, re, ast, sys, os
-names = set()
-_D = os.path.join(os.path.dirname(os.path.abspath(__file__)), '..', 'data')
-for f in (os.path.join(_D, 'strings.txt'), os.path.join(_D, 'keysites.txt')):
-    for l in open(f, encoding='latin1'):
-        m = re.search(r"'(.*)'\s*\S*$", l.rstrip('\n'))
-        if m:
-            try: names.add(ast.literal_eval("'" + m.group(1) + "'"))
-            except Exception: pass
+import hashlib, base64, re, sys, os
+sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+import elf, funcstr, keysites
+_data = open(os.path.join(os.path.dirname(os.path.abspath(__file__)), '..', '..', 'sample', 'libdu.so'), 'rb').read()
+_got = elf.relative(_data)
+names = {s for _, s, _ in keysites.key_loads(_data, _got)}  # every decoded string is a candidate pref name
+for strs in funcstr.strings_by_func(_data, _got, elf.funcs(_data)).values(): names.update(strs)
 names |= {'fut', 'lut', 'boot_times', 'mtr', 'ndcd', 'pkcg', 'n_a', 'o_a', 'aid', 'imdrt', 'device_label', 'device_id', 'nctl', 'sid', 'cdd', 'ioaid'} | {f'i{i}' for i in range(1, 10)}
-H = {hashlib.md5(n.encode('latin1')).hexdigest().upper(): n for n in names}
+H = {hashlib.md5(n.encode('utf-8')).hexdigest().upper(): n for n in names}
 def dec(v):
     try:
         t = base64.b64decode(v).decode('latin1')

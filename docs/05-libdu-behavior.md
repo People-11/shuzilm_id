@@ -1,11 +1,11 @@
 # 5. libdu.so 的行为
 
-本章只陈述我们**在客户端观察到的事实**：反汇编、单函数模拟执行和 unidbg 整体运行三者之一（多数是两者以上）能对上的才写进来。推断会单独标注。函数偏移、字段键名和样本说明见 [3. 样本说明](03-sample.md)，复现方法见 [4. 工具](04-tools.md)。完整的逐字段数据在 [`docs/data/keys_sources.tsv`](data/keys_sources.tsv) 和 [`docs/data/keys_catalog.tsv`](data/keys_catalog.tsv)。
+本章只陈述我们**在客户端观察到的事实**，推断会单独标注。文中括号里的 `E12`、`A3` 等编号是 [`claims.tsv`](data/claims.tsv) 中的核对项，可以用 `verify.py` 对样本重新检查；逐字段的完整数据也可以从样本当场生成，见 [第 4 章](04-tools.md)。
 
 - [5.1 结构与通信](#51-结构与通信)
 - [5.2 字段编码](#52-字段编码)
 - [5.3 本地持久化](#53-本地持久化)
-- [5.4 首次注册上报 mdna](#54-首次注册上报-mdna)
+- [5.4 注册上报 mdna](#54-注册上报-mdna)
 - [5.5 环境检测](#55-环境检测)
 - [5.6 后续上报：设备信息全量采集](#56-后续上报设备信息全量采集)
 - [5.7 跨应用 ID 与其他 SDK 的 ID](#57-跨应用-id-与其他-sdk-的-id)
@@ -45,7 +45,7 @@
 3. 通过 HTTPS POST 发出。先尝试 Java 的 `HttpURLConnection`，失败时退回 libdu 自带的 native socket 实现（`sub_3de98`）。传输方式、是否走了回退、耗时等会记进 pref `mtr`，并在下一次上报时作为 `kWV` 发出。
 4. 回包同样是循环 XOR 过的 JSON（不压缩）。
 
-首次注册的 URL：
+mdna 的 URL：
 
 ```
 https://auni.telecome.cn/a/mdna/report?v=8.7&t=m
@@ -60,12 +60,12 @@ https://auni.telecome.cn/a/mdna/report?v=8.7&t=m
 
 | 路径 | 构造函数 | 字段数 | 内容 |
 |---|---|---|---|
-| `/a/mdna/report?v=8.7&t=m` | `sub_68f9c` | 80+ | 首次注册，见 [5.4](#54-首次注册上报-mdna) |
+| `/a/mdna/report?v=8.7&t=m` | `sub_68f9c` | 80+ | 注册，每次 `query` 都发，见 [5.4](#54-注册上报-mdna) |
 | `/a/d2api/report?v=8.7&t=a&e=2` | `sub_7f3f4` 等 | ~249 | 设备信息全量 |
 | `/a/dcc2/request?v=2.0&c=1&e=1` | | 58 | mdna 字段的子集 + 少量新字段 |
 | `/a/audd/valid?v=1.0&t=uid1` | | 47 | 同上 |
 | `/a/daa/report?v=1.1&c=1&e=1` | | ~259 | 应用信息 + 与 d2api 相同的全量设备信息 |
-| `/a/dai/report` | | | 2026-10-31 的复现运行中出现，没有单独分析 |
+| `/a/dai/report?v=2.2&c=1&e=1` | | 45 | 没有单独分析 |
 
 ### 回包
 
@@ -98,9 +98,9 @@ libdu 的 put 辅助函数 `sub_f07fc` 按“模式”对值编码。编码带�
 | 10 | 去掉第 `n-1-P%10` 个字符（长度 ≤ 9 时去掉最后一个）后按模式 2 编码；另外在 `"s"+键名` 下放校验值 `MD5_UPPER(str(全部字符码位之和 + P%100/10))[:7]` | 完全可逆：校验值能确定被去掉的那个字符 |
 | 1、7 | 少数字段使用（`hH1` 蓝牙地址、`9P6` 邻居表），没有逐一核实 | 未核实 |
 
-unidbg 的时钟只有毫秒精度，`2cO` 末三位总是 `000`，所以我们早期在 harness 里看到的永远是 P = 0（K = 1、重排①、去掉最后一个字符）。harness 的 `NS3` 变量可以强制末三位，用来验证上面的规则（`duenc.py` 中的断言就是这些观察值）。
+unidbg 的时钟只有毫秒精度，harness 里 `2cO` 末三位默认是 `000`（P = 0）；用 `NS3` 变量可以强制末三位来验证上面的规则。
 
-以 harness 中的模拟设备为例（P = 0，数据见 `docs/data/payload_*.json`）：
+以 harness 中的模拟设备为例（P = 0，可以用 `extract_payloads.py` 自己取出来）：
 
 | 字段 | 上报值 | 还原后 |
 |---|---|---|
@@ -126,11 +126,13 @@ unidbg 的时钟只有毫秒精度，`2cO` 末三位总是 `000`，所以我们�
 
 **识别“重装后恢复数据”**：SDK 第一次运行时（pref `boot_times` 不存在）会记下 `fut` = 当前安装的 `firstInstallTime`。以后每次上报都会比较这两个值；如果 prefs 还在、`fut` 却和当前安装时间对不上，说明这些 prefs 是从备份或换机工具恢复到了一个新安装里。这时上报 `3k9 = 1`，并把之前保存的设备 ID 作为 `8N4` 一并发出（`sub_140768`、`sub_13d5a4`）。
 
-## 5.4 首次注册上报 mdna
+## 5.4 注册上报 mdna
 
-由 `sub_68f9c(env, ctx, 1)` 构造（一个 762 个状态的平坦化状态机，见 `tools/data/sm_68f9c.txt`），每次 `query` 都会发送。下表是它的全部字段。
+由 `sub_68f9c(env, ctx, 1)` 构造（一个 762 个状态的平坦化状态机，可以用 `deflat.py sample/libdu.so 68f9c 7a22c x21 auto` 还原），每次 `query` 都会发送。下表是它的主要字段。
 
 “DuClient”一列打 ✓ 的，是 DuClient 实际发送的最小字段集。没有这些字段，服务器不返回 ID。其余字段在 DuClient 中以注释形式保留了实现。
+
+DuClient 发送和注释中列出的键全部属于 mdna，没有后续上报的字段（D1–D19）。
 
 ### 身份标识
 
@@ -240,32 +242,39 @@ unidbg 的时钟只有毫秒精度，`2cO` 末三位总是 `000`，所以我们�
 
 ## 5.5 环境检测
 
-mdna 的检测项由 `sub_61074` 一组函数完成。下表的“安全值”是普通的、没有改动过的手机上会得到的值，也就是 DuClient 注释中填写的值。
+检测项由 `sub_61074` 一组函数完成（zc7 在 d2api 中）。下表每一行都在 harness 中实测过：先在干净环境里跑一次，再分别伪造对应的应用、文件或 Hook 跑一次，比较字段值（核对项见最后一列）。
 
-| 键 | 检测什么 | 怎么检测 | 安全值 |
-|---|---|---|---|
-| `tth` | Root 管理器 | 用 `getPackageInfo` 逐个查询 14 个包名：SuperSU、Superuser、KingRoot、Magisk Alpha、KernelSU、Fox's Magisk Module Manager……（`sub_cd8ac`） | 0 |
-| `QgA` | su 程序 | `/system/bin/su`、`/system/xbin/su`、`/sbin/su` 等 6 个路径是否存在（`sub_c36e8`） | 0 |
-| `90P` | Magisk 挂载 / 宿主 APK 可读性 | `/proc/self/mountinfo` 中是否出现 `magisk`；宿主 APK 是否可读（`sub_cfcfc`） | `11` |
-| `LAh` | Hook / 虚拟化框架，8 组各占一位 | 是否安装了 LSPosed、VirtualXposed、Xposed / EdXposed、Substrate / Dreamland、Shizuku、HideMyApplist、Magisk、太极 / 改机工具（`sub_ce2e4`） | `11111111` |
-| `Xl9` | 进程内的注入 | `/proc/self/maps` 中是否有 `xposed`、`frida`（`sub_d9980`）。libdu 中另有一处（`sub_cb778`）遍历 `/proc/self/task`，查找 frida 的线程名 `gum-js-loop`、`gmain`，对应哪个字段没有确认 | `0000` |
-| `iZS` | 调试器 | `/proc/self/status` 的 `TracerPid` | 0 |
-| `5mZ` | TLS 校验被 Hook（抓包绕过） | 11 个证书校验相关的 Java 方法（`TrustManagerImpl.checkServerTrusted`、`SSLContext.init`、`CertPinManager.isChainValid`……）是否被改成了 native（`sub_d8e1c`） | 0 |
-| `0KQ` | TLS 校验被全局关闭 | 默认 TrustManager 是否接受**空证书链**（`sub_d90e4`） | 0 |
-| `D32` | 虚拟摄像头 | `Camera.setPreviewCallback`、`CameraDeviceImpl.createCaptureSession`、`ImageReader.newInstance` 等 5 个方法是否被改成 native（`sub_d9ca0`） | 0 |
-| `bzt` | 改机（伪造 IMEI） | `TelephonyManager.getDeviceId / getImei / getMeid / getSubscriberId` 是否被改成 native（`sub_d862c`） | `0000` |
-| `nur` | 自动点击 / 脚本工具 | 31 个包名：按键精灵、触动精灵、Auto.js、自动点击器……（`sub_cd32c`） | 0 |
-| `qH9` | 沙箱是否完整 | 宿主数据目录的上级目录能否列出（`sub_972a0`） | `0` |
-| `Chh` | 存储访问 | `/storage/emulated/0/Android/data` 是否可读 | 0 |
-| `c2O` / `PV8` | 开发者选项 | `Settings.Global` `adb_enabled` / `stay_on_while_plugged_in` | `0` |
-| `wlM` | USB 连接与 ADB | 粘性广播 `USB_STATE` 的 `connected` / `adb`（`sub_cec88`） | 0 |
-| `ZZA` | VPN | `/sys/class/net/tun0`、`ppp0`、`tap0` 是否存在（`sub_bc708`） | 0 |
-| `QVn` | 权限 | 宿主是否获得粗略定位、精确定位、附近 Wi-Fi、电话、蓝牙扫描、读存储权限，每项一位（`sub_9200c`） | 视宿主而定 |
-| `yzW` | 已启用的无障碍服务 | 每个服务的**包名**，逗号分隔（`sub_976a0`），模式 2 | 不上报 |
-| `Q23` | 用户安装的 CA 证书 | `AndroidCAStore` 中 `user:` 开头的别名 + 签发者，最多 1023 字符（`sub_d7dd4`） | 不上报 |
-| `S6e`、`R53`、`R63` | SELinux / 可调试 / adbd | 见 5.4 | 1 / 0 / stopped |
+- “干净”和“检出”两列都是**原值**。标为 mode 2 的字段会按本次上报的 P 编码（[5.2](#52-字段编码)），所以线上看到的值随 P 变化。例如干净设备的 LAh，P = 0 时线上是 `11111111`，P = 281 时是 `IIIIIIII`。
+- “是否安装”统一用 `PackageManager.getApplicationIcon(包名)` 判断：不抛 `NameNotFoundException` 就算已安装。
+- 带 `?` 的结论，是模拟环境没有触发、只做了静态核对的部分。
+
+| 键 | 编码 | 检测什么 | 怎么检测 | 干净 | 检出 | 核对项 |
+|---|---|---|---|---|---|---|
+| `tth` | 原样 | Root 管理器 | 逐个查询 14 个包名：SuperSU、Superuser、KingRoot、Magisk Alpha、KernelSU、Fox's Magisk Module Manager……（`sub_cd8ac`） | 0 | 1 | E1–E3 |
+| `QgA` | 原样 | su 程序 | `stat` 约 40 个路径（`/system/bin/su`、`/system/xbin/su`、`/sbin/su`、`/apex/com.android.art/bin/su`、`/data/local/su`、SuperSU 守护进程文件等），最后执行 `which su`（`sub_c36e8`） | 0 | 1 | E4、E5 |
+| `90P` | mode 2 | Magisk / Xposed 系框架 | 第 1 位：`access` 28 个特征文件（`/sbin/.magisk`、`/data/adb/magisk`、`/data/adb/lspd`、riru / EdXposed / 太极 / 梦境模块目录、`XposedBridge.jar`、`libxposed_art.so` 等，`sub_cfdc8`），或者 `/proc/mounts` 中出现 `magisk`（`sub_cd1ac`）；第 2 位的含义没有确定 | `00` | `10` | E6–E11 |
+| `LAh` | mode 2 | 8 类 Hook / 虚拟化 / 改机 / 隐藏工具，每类一位 | 查询 18 个包名。按位依次是：① Magisk（含 Delta）② Xposed Installer ③ EdXposed、VirtualXposed ④ LSPosed / LSPatch ⑤ Substrate ⑥ 改机工具 `com.soft.apk008v`、Shizuku ⑦ `com.yztc.studio.plugin` ⑧ `com.uwish.app`、HideMyApplist、HideMyRoot、太极、Dreamland（`sub_cec90`） | `00000000` | 对应位为 1 | E12–E21 |
+| `zc7` | 原样 | 进程内的注入框架（d2api） | 第 1 位：`/proc/self/maps` 中出现 xposed / lspd / riru / xhook 等特征；第 2 位：maps 中出现 frida；第 3 位：LSPosed / EdXposed 文件存在；第 4 位：干净环境下也是 1，含义没有确定。此外还遍历 `/proc/self/fd` 和 `/proc/self/task`，查找 frida 线程名（`sub_d1910` → `sub_cb96c`） | `0001` | 如 frida → `0101` | E29–E33 |
+| `Xl9` | 原样 | 虚拟摄像头（进程内） | 第 1、2 位：`/proc/self/maps` 中出现 `sandyz` / `virtualcam`；第 3、4 位：某个应用的 `Android/data/<包名>/cache/` 下有 `stream.txt` / `virtual.mp4`（`sub_d9980`） | `0000` | 对应位为 1 | E22–E26 |
+| `Chh` | 原样 | 虚拟摄像头（相册目录） | `DCIM/Camera1/` 下的 `virtual.mp4`、`disable.jpg`、`no-silent.jpg`、`no_toast.jpg`、`private_dir.jpg`、`force_show.jpg`、`1000.bmp`，或者 `Android/data/<包名>/files/Camera1/virtual.mp4`（`sub_d96ec`） | 0 | 1 | E27、E28 |
+| `D32` | 原样 | 相机方法被 Hook（虚拟摄像头） | `Camera.setPreviewCallback`、`setPreviewCallbackWithBuffer`、`startPreview`、`CameraDeviceImpl.createCaptureSession`、`ImageReader.newInstance` 是否被改成 native，每个一位（`sub_d9ca0`） | 0 | 如 `startPreview` → 4 | E36 |
+| `bzt` | 原样 | 电话标识方法被 Hook（改机） | `TelephonyManager.getDeviceId / getImei / getMeid / getSubscriberId` 是否被改成 native，每个一位（`sub_d862c`） | `0000` | 如 `getImei` → `0100` | E35 |
+| `5mZ` | 原样 | TLS 校验方法被 Hook（抓包绕过） | 11 个证书校验相关方法（`TrustManagerImpl.checkServerTrusted`、`SSLContext.init`、`CertPinManager.isChainValid` 等）是否被改成 native，每个一位（`sub_d8e1c`） | 0 | 如 `SSLContext.init` → 16 | E37 |
+| `0KQ` | 原样 | TLS 校验被全局关闭 | 默认 TrustManager 是否接受**空证书链**（`sub_d90e4`） | 0 | 1 ? | E38 |
+| `iZS` | 原样 | 调试器 | `/proc/self/status` 中 `TracerPid` 的原值（`sub_c82e0`） | 0 | 调试器的 pid | E34 |
+| `ZZA` | 原样 | VPN | `access` `/sys/class/net/tun0`、`ppp0`、`tap0`（`sub_bc708`） | 0 | 1 | E39 |
+| `nur` | 原样 | 自动点击 / 脚本工具 | 逐个查询 31 个包名：按键精灵、触动精灵、Auto.js、各种自动点击器……（`sub_cd32c`） | 0 | 1 | E40 |
+| `qH9` | 原样 | 沙箱是否完整 | 宿主数据目录的上级目录（`%s/..`）能否 `opendir`（`sub_972a0`） | `0` | `1` ? | E44 |
+| `c2O` / `PV8` | 原样 | 开发者选项 | `Settings.Global` 中 `adb_enabled` / `stay_on_while_plugged_in` 的原值 | `0` | 设置值 | E43 |
+| `wlM` | 原样 | USB 连接与 ADB | 粘性广播 `USB_STATE`（`sub_cec88`），模拟环境没有触发 | 0 | ? | — |
+| `QVn` | 原样 | 权限 | 宿主是否获得粗略定位、精确定位、附近 Wi-Fi、电话等权限，每项一位（`sub_9200c`） | 视宿主而定 | | E45 |
+| `yzW` | mode 2 | 已启用的无障碍服务 | 每个服务的**包名**，逗号分隔（`sub_976a0`） | 不上报 | 包名列表 | E41 |
+| `Q23` | 原样 | 用户安装的 CA 证书 | `AndroidCAStore` 中 `user:` 开头的别名加签发者，最多 1023 字符（`sub_d7dd4`） | 不上报 | 证书列表 ? | E42 |
+| `S6e`、`R53`、`R63` | 原样 | SELinux / 可调试 / adbd | 见 5.4 | 1 / 0 / stopped | | |
 
 注意 `yzW` 和 `Q23` 上报的不是“有 / 没有”，而是具体内容：开了哪些无障碍服务（读屏软件、自动化工具、密码管理器……），装了哪些自签证书（抓包工具、企业代理……）。
+
+虚拟摄像头一共查了三处：`D32` 查相机方法有没有被 Hook，`Xl9` 查进程和应用目录，`Chh` 查相册目录。这类工具常被用来在人脸核验时“播放”预先录好的视频。
 
 ## 5.6 后续上报：设备信息全量采集
 
@@ -328,7 +337,7 @@ mdna 成功后，同一次 `query` 里会继续发送 d2api、dcc2、audd、daa 
 | | `7Hz` | `/data/local/tmp` 的访问/修改时间（推断：用来判断是否用 adb 推送过文件） | `stat` |
 | | `XmW` / `Ell` | SDK 自己记录的 MAC 历史 / 另一个状态文件 | `/89ca503b`、`/ee02ad45` |
 
-这张表是按类别挑出的代表字段，没有列全。全部约 250 个字段及其来源函数、解出的字符串见 [`keys_sources.tsv`](data/keys_sources.tsv)。
+这张表是按类别挑出的代表字段，没有列全。全部约 250 个字段及其来源函数、解出的字符串，可以用 `keys_sources.py` 生成。
 
 ## 5.7 跨应用 ID 与其他 SDK 的 ID
 
@@ -337,12 +346,12 @@ mdna 成功后，同一次 `query` 里会继续发送 d2api、dcc2、audd、daa 
 在一类后续上报（内部类型 6，由 `sub_7f3f4` 构造，回包由 `sub_11f7f0` 处理，很可能就是 d2api）的回包里，如果带有至少 11 个字符的 `o_a`，并且宿主没有关闭这项功能（`data_163418 != 0x2718`），libdu 会通过 shell 执行：
 
 ```sh
-mkdir -p /sdcard/Android/Data/System/local/
+mkdir /sdcard/Android/Data/System/local/
 echo <base64(MD5(o_a) + o_a)> > /sdcard/Android/Data/System/local/o_a
 echo <base64(MD5(o_a) + o_a)> > /sdcard/.o_a
 ```
 
-（实际路径写成 `/sdcard/../../../../../../sdcard/...`，`sub_ef53c`，命令由 `sub_ee084` 执行。）
+（实际路径写成 `/sdcard/../../../../../../sdcard/...`，`sub_ef53c`，命令由 `sub_ee084` 以 `popen` 执行，核对项 X8–X10。）
 
 之后**任何集成了这个 SDK 的 App**，在 mdna 中都会读取这个文件，作为 `v1X` 上报（`sub_ef3f8`）。同一个回包处理函数还会把 `nsci` 写进 `/sdcard/Android/ZHVzY2Lk`（base64 的 `duscid`），后续上报中的 `Kvk` 就是这个文件的 MD5（文件不存在时取一个新随机 UUID 的 MD5）。
 
@@ -352,11 +361,20 @@ echo <base64(MD5(o_a) + o_a)> > /sdcard/.o_a
 - 同一台设备上的不同 App（不同开发者、不同签名）通过这个文件拿到同一个值，**Android 8 起 ANDROID_ID 按签名隔离，本来是为了防止这种跨应用关联，这个文件让这层保护失效**；
 - 文件在共享存储上，任何有存储权限的 App 都能读，不只是集成了数盟 SDK 的 App。
 
-由于 unidbg 不支持 exec，这段 shell 写入在 harness 里没有真正执行，以上内容来自静态分析和对写入函数的单独模拟。作用域存储（Android 11+）下宿主还能否写入 `/sdcard` 根目录，取决于宿主的存储权限，我们没有在真机上验证。
+由于 unidbg 不支持 exec，这段 shell 写入在 harness 里没有真正执行，以上内容来自静态分析（写入函数解出的命令字符串）。读取一侧在 harness 里能看到：mdna 会打开 `/sdcard/.o_a` 等文件（核对项 X7）。作用域存储（Android 11+）下宿主还能否写入 `/sdcard` 根目录，取决于宿主的存储权限，我们没有在真机上验证。
+
+### 写进系统设置的跨应用 ID
+
+共享存储之外还有第二条通道：**Settings.System**。这是系统级的设置表，所有应用都能读取。
+
+- 回包处理函数 `sub_11f7f0` 会把服务器下发的 `nsci` / `sci` 以 `ZHVzY2Lk` 和 `duscid` 两个键名写进 Settings.System（经 `sub_b1274` → `sub_b114c`，`Settings.System.putString`；核对项 X11–X14）；
+- `sub_b10b4` 还会写一个名为 `dxCRMxhQDPkdGePG` 的键。这个名字与阿里 UTDID 使用的 `dxCRMxhQkdGePGnp` 几乎一样（核对项 X15）；
+- 两处写入都先检查宿主有没有 `WRITE_SETTINGS`。这是一项需要用户在系统设置里单独授予的特殊权限，大多数应用没有；
+- 读取一侧不需要任何权限：mdna 会从 Settings.System 读取 `duscid` 和 `ZHVzY2Lk`（核对项 X16）。也就是说，只要有一个获得了 `WRITE_SETTINGS` 的应用写入过，同一台设备上其他所有接入 SDK 的应用都能读到。
 
 ### 读取其他 SDK 的 ID
 
-见 [5.6](#56-后续上报设备信息全量采集) 的第一组：百度、数美、阿里 UTDID、字节跳动 AppLog、穿山甲的设备 ID，以及其他 SDK 写在共享存储（`..ccvid`）和数据库（`zx.db`）里的标识，都会被读取并上报。另外 mdna 本身还读取 21 个厂商广告 ID（[5.4](#54-首次注册上报-mdna)）。
+见 [5.6](#56-后续上报设备信息全量采集) 的第一组：百度、数美、阿里 UTDID、字节跳动 AppLog、穿山甲的设备 ID，以及其他 SDK 写在共享存储（`..ccvid`）和数据库（`zx.db`）里的标识，都会被读取并上报。其中，百度、数美、UTDID 是从 Settings.System 读的，字节跳动和穿山甲的 ID 读自宿主的 `embed_applog_stats` / `ttopenadsdk` SharedPreferences（核对项 X1–X7）。另外 mdna 本身还读取 21 个厂商广告 ID（[5.4](#54-注册上报-mdna)）。
 
 ## 5.8 事件接口
 
@@ -389,8 +407,9 @@ d2api 回包由 `sub_11b8d8` 处理。它读取一批混淆过的键，写入对
 
 ## 5.10 没有覆盖到的部分
 
-- **需要权限、真机或服务器配合才会出现的字段**：`02P 0q1 0wL 1yT 3pD 59p 6PH 9P6 Blv Bsy Dg1 EIx Ell EmH Hg6 IPz ISX JcY Lcq Nue OEu OW2 Pxm QvM SAu Slq Sxg T5u TV5 TpT` 等，在 harness 中没有实际运行到。它们的来源只能从静态字符串判断（见 `keys_sources.tsv`）。
-- **栈上 XOR 字符串**：少数采集函数的字符串是在栈上逐字节拼出来的，静态扫描看不到。我们用 harness 运行时归因和 `leafstr.py` 补了一部分，`keys_sources.tsv` 中值来源为空或 `?` 的字段还没有完全确认。
+- **需要权限、真机或服务器配合才会出现的字段**：`02P 0q1 0wL 1yT 3pD 59p 6PH 9P6 Blv Bsy Dg1 EIx Ell EmH Hg6 IPz ISX JcY Lcq Nue OEu OW2 Pxm QvM SAu Slq Sxg T5u TV5 TpT` 等，在 harness 中没有实际运行到。它们的来源只能从静态字符串判断（`keys_sources.py` 的输出）。
+- **静态无法确定键名的 put 点**：`keys_sources.py` 输出中键为 `?` 的行没有逐一确认。
+- **只做了静态核对的字段**：表中标 `?` 的项，以及 5.6 中需要权限的大部分字段（核对项 A6–A20 只检查了“由哪个函数采集、该函数用到哪些字符串”）。
 - **d2api 回包中各个开关的具体含义**：只确认了它们写到哪个 pref、和什么值比较。
 - **其他 native 操作**：`sub_136838` 分发的 `ttERIJNQ`、`nYfbIIFp`、`zZVTFJRA` 等。
 - **SDK 的 Java 层**：完全没有分析。

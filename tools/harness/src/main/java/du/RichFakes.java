@@ -50,7 +50,11 @@ final class RichFakes {
         m.put("android/service/\"connectivity\"->getAllNetworks()[Landroid/net/Network;", (s, a) -> new ArrayObject(h.obj("android/net/Network", "net100")));
         m.put("android/service/\"connectivity\"->getLinkProperties(Landroid/net/Network;)Landroid/net/LinkProperties;", (s, a) -> h.obj("android/net/LinkProperties", "lp"));
         m.put("android/net/LinkProperties->getInterfaceName()Ljava/lang/String;", (s, a) -> "wlan0");
-        m.put("android/net/LinkProperties->getHttpProxy()Landroid/net/ProxyInfo;", (s, a) -> null);
+        // PROXY=host:port: the active network's HTTP proxy
+        String proxy = System.getenv("PROXY");
+        m.put("android/net/LinkProperties->getHttpProxy()Landroid/net/ProxyInfo;", (s, a) -> proxy == null ? null : h.obj("android/net/ProxyInfo", proxy));
+        m.put("android/net/ProxyInfo->getHost()Ljava/lang/String;", (s, a) -> proxy.split(":")[0]);
+        m.put("android/net/ProxyInfo->getPort()I", (s, a) -> Integer.parseInt(proxy.split(":")[1]));
         m.put("android/net/LinkProperties->getLinkAddresses()Ljava/util/List;", (s, a) -> h.obj("java/util/List", List.of("fe80::1c2b:3cff:fe4d:5e6f/64", "192.168.1.23/24")));
         m.put("android/net/LinkProperties->getDnsServers()Ljava/util/List;", (s, a) -> h.obj("java/util/List", List.of("/192.168.1.1")));
         m.put("android/service/\"connectivity\"->getNetworkCapabilities(Landroid/net/Network;)Landroid/net/NetworkCapabilities;", (s, a) -> h.obj("android/net/NetworkCapabilities", "nc"));
@@ -61,7 +65,7 @@ final class RichFakes {
         m.put("android/service/\"connectivity\"->getMobileDataEnabled()Z", (s, a) -> false);
         m.put("android/service/\"connectivity\"->getActiveNetworkInfo()Landroid/net/NetworkInfo;", (s, a) -> h.obj("android/net/NetworkInfo", "ni"));
         m.put("android/net/NetworkInfo->getTypeName()Ljava/lang/String;", (s, a) -> "WIFI");
-        m.put("android/net/NetworkInfo->getSubtypeName()Ljava/lang/String;", (s, a) -> "");
+        m.put("android/net/NetworkInfo->getSubtypeName()Ljava/lang/String;", (s, a) -> System.getenv().getOrDefault("SUBTYPE", "")); // SUBTYPE=LTE: the active network's subtype name
         m.put("android/service/\"phone\"->getSimOperator()Ljava/lang/String;", (s, a) -> "");
         m.put("android/service/\"phone\"->getNetworkOperator()Ljava/lang/String;", (s, a) -> "");
         m.put("android/service/\"phone\"->getSimState()I", (s, a) -> 1);

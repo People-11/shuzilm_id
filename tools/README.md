@@ -1,7 +1,6 @@
 # tools
 
-- `python/`：静态分析脚本。每个脚本的文件头都写了用法。
-- `data/`：由 `sample/libdu.so` 派生的中间数据，也是脚本的默认输入。
+- `python/`：分析与核对脚本，只需要 `sample/libdu.so` 一个输入。每个脚本的文件头都写了用法。
 - `harness/`：unidbg harness（Maven 工程）。
 
-环境搭建、每个脚本的用途、harness 的构建方法和环境变量，见 [docs/04-tools.md](../docs/04-tools.md)。
+怎样搭建环境、一键核对、自己查看某个字段的来源，见 [docs/04-tools.md](../docs/04-tools.md)。

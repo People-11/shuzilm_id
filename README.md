@@ -6,13 +6,13 @@
 
 ## 主要发现
 
-- **首次注册就发送 80 多个字段**（视设备而定），之后的全量上报每份还有约 250 个字段。真正拿到 ID 只需要其中十几个（[5.4](docs/05-libdu-behavior.md#54-首次注册上报-mdna)）。
+- **首次注册就发送 80 多个字段**（视设备而定），之后的全量上报每份还有约 250 个字段。真正拿到 ID 只需要其中十几个（[5.4](docs/05-libdu-behavior.md#54-注册上报-mdna)）。
 - **环境检测**：Root / su / Magisk 挂载、Xposed / LSPosed / Frida、调试器、TLS 证书校验 Hook、系统是否接受空证书链、虚拟摄像头、改机、自动点击工具、SELinux、ADB、VPN……（[5.5](docs/05-libdu-behavior.md#55-环境检测)）
-- **上报的是具体内容，不只是检测结果**：hosts 文件内容、用户安装的 CA 证书、已启用的无障碍服务包名、所有网络接口的 IP 与 DNS（[5.4](docs/05-libdu-behavior.md#54-首次注册上报-mdna)）。
+- **上报的是具体内容，不只是检测结果**：hosts 文件内容、用户安装的 CA 证书、已启用的无障碍服务包名、所有网络接口的 IP 与 DNS（[5.4](docs/05-libdu-behavior.md#54-注册上报-mdna)）。
 - **周边环境**：局域网邻居的 IP 与 MAC、周围 Wi-Fi 扫描结果、已配对蓝牙设备；native 层还有处理附近蓝牙设备扫描、传感器、信号强度事件的接口（[5.6](docs/05-libdu-behavior.md#56-后续上报设备信息全量采集)、[5.8](docs/05-libdu-behavior.md#58-事件接口)）。
 - **读取其他公司 SDK 的设备 ID**：百度、数美、阿里 UTDID、字节跳动 AppLog、穿山甲等（[5.7](docs/05-libdu-behavior.md#57-跨应用-id-与其他-sdk-的-id)）。
-- **跨应用 ID**：服务器下发的 `o_a` 会通过 shell 写进 `/sdcard/.o_a`。卸载后仍然存在，所有集成了 SDK 的 App 都会读取并上报它（[5.7](docs/05-libdu-behavior.md#57-跨应用-id-与其他-sdk-的-id)）。
-- **“编码”可逆**：绝大多数字段只是字符 +1 加重排。ANDROID_ID 可以从上报中完整还原，Widevine 设备 ID 原样上报。这与隐私政策中“本地脱敏”“服务器不收集任何设备原始数据”的说法不符（[5.2](docs/05-libdu-behavior.md#52-字段编码)、[6.2](docs/06-shuzilm.md#62-隐私政策的说法与我们的观察)）。
+- **跨应用 ID**：服务器下发的 `o_a` 会通过 shell 写进 `/sdcard/.o_a`。卸载后仍然存在，所有集成了 SDK 的 App 都会读取并上报它。宿主有 `WRITE_SETTINGS` 权限时，SDK 还会把服务器下发的标识写进所有应用都能读取的 Settings.System（[5.7](docs/05-libdu-behavior.md#57-跨应用-id-与其他-sdk-的-id)）。
+- **“编码”可逆**：绝大多数字段只是按上报自带的时间字段做字符偏移和重排。ANDROID_ID 可以从上报中完整还原，Widevine 设备 ID 原样上报。这与隐私政策中“本地脱敏”“服务器不收集任何设备原始数据”的说法不符（[5.2](docs/05-libdu-behavior.md#52-字段编码)、[6.2](docs/06-shuzilm.md#62-隐私政策的说法与我们的观察)）。
 - **推断**：数盟宣称为设备保存“历史风险标签”。所以接入方拿到你的 ID 就能查到这台设备的环境状况：你在这个 App 里藏得再好，只要在任何一个接入了 SDK 的 App 里没藏住就够了（[6.3](docs/06-shuzilm.md#63-推断一个-id-能告诉别人什么)）。
 
 ## 文档
@@ -20,7 +20,7 @@
 1. [动机](docs/01-motivation.md)
 2. [有责任的披露](docs/02-responsible-disclosure.md)：原则、刻意不公开的内容、时间线
 3. [样本说明](docs/03-sample.md)：libdu.so 的来源与哈希、DuClient.kt 是什么、局限
-4. [工具与环境搭建](docs/04-tools.md)：Python 静态分析脚本、unidbg harness 的构建与使用
+4. [工具与验证](docs/04-tools.md)：一键核对、自己查看某个结论的来源、harness 的使用
 5. [libdu.so 的行为](docs/05-libdu-behavior.md)：通信、编码、持久化、逐字段说明
 6. [数字联盟：一个设备 ID 背后意味着什么](docs/06-shuzilm.md)：官网自述、隐私政策对照、推断
 
@@ -29,12 +29,21 @@
 ```
 sample/       libdu.so 样本、校验值、DuClient.kt（纯 Kotlin 的最小实现，apiKey 已脱敏）
 tools/
-  python/     静态分析脚本（capstone / unicorn）
-  data/       由样本派生的中间数据（重定位、函数表、解密字符串、状态机……）
+  python/     分析与核对脚本（只需要 sample/libdu.so 一个输入）
   harness/    unidbg harness：在 PC 上模拟一台假的 Android 设备运行 libdu.so
 docs/         文档
-  data/       全部字段的目录与来源表、模拟设备上捕获的五类上报明文
+  data/claims.tsv   文档中每条结论的核对项
 ```
+
+## 如何核对
+
+```sh
+pip install capstone==5.0.9 unicorn==2.1.4
+python -I tools/python/verify.py --no-harness     # 静态核对
+python -I tools/python/verify.py                  # 加上运行时核对（需要先构建 harness，见第 4 章）
+```
+
+仓库不包含任何生成出来的中间数据。需要看某个字段的来源、某类上报的明文时，按 [第 4 章](docs/04-tools.md) 从样本当场生成。
 
 ## 范围与声明
 

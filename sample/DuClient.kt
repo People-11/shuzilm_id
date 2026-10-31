@@ -43,8 +43,9 @@ import kotlin.random.Random
 //
 // Value encodings (the modes of libdu's put helper sub_f07fc):
 //   raw          the value as is
-//   mode 2 / 3   DuCodec.enc (every char + 1, then shuffled)
+//   mode 2 / 3   DuCodec.enc: every char rotated within printable ASCII, then shuffled
 //   mode 10      putTwin: enc of the value with one char dropped, and its checksum under "s" + key (as foO / sfOo)
+// All three take a parameter P from the report's own time string 2cO (DuCodec.param), so one report shares one P.
 
 object DuClient {
 
@@ -220,19 +221,23 @@ object DuClient {
         val androidId = Settings.Secure.getString(ctx.contentResolver, Settings.Secure.ANDROID_ID).orEmpty()
         val pkgInfo = ctx.packageManager.getPackageInfo(ctx.packageName, 0)
         val nowMs = System.currentTimeMillis()
-        val (sec, ms) = nowMs / 1000 to nowMs % 1000
+        // 2cO as libdu prints clock_gettime(CLOCK_REALTIME): "%ld.%ld", nanoseconds not zero-padded. Java has no
+        // nanosecond wall clock, so the sub-millisecond digits come from the monotonic clock
+        val nsec = (nowMs % 1000 * 1_000_000 + SystemClock.elapsedRealtimeNanos() % 1_000_000).coerceAtLeast(1)
+        val time = "${nowMs / 1000}.$nsec"
+        val p = DuCodec.param(time)
         val net = networkCaps(ctx)
         val tm = ctx.getSystemService(Context.TELEPHONY_SERVICE) as? TelephonyManager
         val sha1 = DuCodec.hashHexUpper("SHA-1", androidId)
         return JSONObject().apply {
             // identity (the server links devices mainly on these)
-            put("foO", DuCodec.enc(DuCodec.dropChar(androidId))) // ANDROID_ID, mode 10 with sfOo
-            put("sfOo", DuCodec.checksum(androidId))
+            put("foO", DuCodec.enc(DuCodec.dropChar(androidId, p), p)) // ANDROID_ID, mode 10 with sfOo
+            put("sfOo", DuCodec.checksum(androidId, p))
             put("P1J", DuCodec.fakeMac(sha1)) // libdu's stand-in MAC from SHA-1(ANDROID_ID); later reports send the reply's o_a
             put("AYk", DuCodec.fakeMac(sha1))
             widevineId()?.let { put("6yY", it) }
             previousId?.let { put("ubF", it) } // the last id (libdu pref n_a)
-            put("dLH", DuCodec.enc(bootUuid(ctx))) // libdu pref boot_uuid: random, once per install (mIS is the kernel's boot_id)
+            put("dLH", DuCodec.enc(bootUuid(ctx), p)) // libdu pref boot_uuid: random, once per install (mIS is the kernel's boot_id)
 
             // SDK and protocol; without 3mS / AAA / BBB the server answers empty
             put("75c", API_KEY)
@@ -240,8 +245,8 @@ object DuClient {
             put("3mS", "v9.0.1")
             put("AAA", "v1.0")
             put("BBB", "v1.0")
-            put("UOv", DuCodec.enc(bootTime()))
-            put("2cO", "%d.%03d000000".format(sec, ms)) // the report's time
+            put("UOv", DuCodec.enc(bootTime(), p))
+            put("2cO", time) // the report's time; its last 3 digits are also the encoding parameter p
 
             // device
             put("R37", Build.MANUFACTURER)
@@ -256,51 +261,51 @@ object DuClient {
             // put("R63", prop("init.svc.adbd", "stopped"))
             // put("Ra", prop("gsm.sim.state", "").substringBefore(','))
             // prop("gsm.operator.numeric", "").takeIf { it.isNotEmpty() }?.let { put("R5a", it) }
-            // prop("net.hostname", "").takeIf { it.isNotEmpty() }?.let { put("R1e", DuCodec.enc(it)) }
+            // prop("net.hostname", "").takeIf { it.isNotEmpty() }?.let { put("R1e", DuCodec.enc(it, p)) }
             // put("S6e", readFirstLine("/sys/fs/selinux/enforce")?.toIntOrNull() ?: 1)
             // put("fPV", "${Locale.getDefault().country},${Locale.getDefault().language}")
             // put("h6Z", "酷安") // getApplicationLabel; a reimplementation would give its own name away
 
             // files and fingerprints
-            // put("ibF", DuCodec.enc(statfsId()))
-            // put("52J", DuCodec.enc(STAT_PATHS.joinToString(",") { lstatId(it) }))
+            // put("ibF", DuCodec.enc(statfsId(), p))
+            // put("52J", DuCodec.enc(STAT_PATHS.joinToString(",") { lstatId(it) }, p))
             // put("YWu", hosts())
             // fontsListMd5()?.let { put("w91", it) }
             // systemLibMd5()?.let { put("gEd", it) }
-            // fileMd5("/system/lib64/libcutils.so")?.let { put("5Tv", DuCodec.enc(it)) }
-            // readFirstLine("/proc/sys/kernel/random/boot_id")?.let { put("mIS", DuCodec.enc(it)) }
-            // readFirstLine("/sys/block/mmcblk0/device/serial")?.let { put("p1m", DuCodec.enc(it)) } // eMMC serial, unreadable on most phones
-            // readFirstLine("/sys/devices/soc0/serial_number")?.let { put("GZY", DuCodec.enc(it)) } // SoC serial
-            // readPrefix("/sys/block/mmcblk0/device/cid", 32)?.let { put("dJs", DuCodec.enc(it)) } // eMMC CID
-            // STAT_TIME_FIELDS.forEach { (key, path) -> statTimes(path)?.let { put(key, DuCodec.enc(it)) } }
-            // statTimes("/data/data/${ctx.packageName}/shared_prefs", mtime = false)?.let { put("KyU", DuCodec.enc(it)) }
-            // canvasMd5()?.let { put("zvW", DuCodec.enc(it)) }
-            // put("G8U", memAndStorage())
-            // put("K5f", DuCodec.md5Upper("%d.%03d000000".format(sec, ms) + android.os.Process.myPid() + Random.nextInt(Int.MAX_VALUE) + android.os.Process.myTid())) // per-report id (libdu sub_6716c)
+            // fileMd5("/system/lib64/libcutils.so")?.let { put("5Tv", DuCodec.enc(it, p)) }
+            // readFirstLine("/proc/sys/kernel/random/boot_id")?.let { put("mIS", DuCodec.enc(it, p)) }
+            // readFirstLine("/sys/block/mmcblk0/device/serial")?.let { put("p1m", DuCodec.enc(it, p)) } // eMMC serial, unreadable on most phones
+            // readFirstLine("/sys/devices/soc0/serial_number")?.let { put("GZY", DuCodec.enc(it, p)) } // SoC serial
+            // readPrefix("/sys/block/mmcblk0/device/cid", 32)?.let { put("dJs", DuCodec.enc(it, p)) } // eMMC CID
+            // STAT_TIME_FIELDS.forEach { (key, path) -> statTimes(path)?.let { put(key, DuCodec.enc(it, p)) } }
+            // statTimes("/data/data/${ctx.packageName}/shared_prefs", mtime = false)?.let { put("KyU", DuCodec.enc(it, p)) }
+            // canvasMd5()?.let { put("zvW", DuCodec.enc(it, p)) }
+            // put("G8U", memAndStorage(p))
+            // put("K5f", DuCodec.md5Upper(time + android.os.Process.myPid() + Random.nextInt(Int.MAX_VALUE) + android.os.Process.myTid())) // per-report id (libdu sub_6716c)
 
             // network
-            // put("iYB", (activeLinkInfo(ctx, withProxy = true) ?: JSONObject()).apply { // libdu sub_b3fe0
-            //     put("AWo", DuCodec.enc(listOf(10, 9, 8, 6, 5, 4, 3, 2, 1, 0).joinToString("") { if (net?.hasTransport(it) == true) "1" else "0" }))
-            //     Regex("""\[ Transports: (\S+) Capabilities:""").find(net.toString())?.let { put("mch", DuCodec.enc(it.groupValues[1])) }
+            // put("iYB", (activeLinkInfo(ctx, true, p) ?: JSONObject()).apply { // libdu sub_b3fe0
+            //     put("AWo", DuCodec.enc(listOf(10, 9, 8, 6, 5, 4, 3, 2, 1, 0).joinToString("") { if (net?.hasTransport(it) == true) "1" else "0" }, p))
+            //     Regex("""\[ Transports: (\S+) Capabilities:""").find(net.toString())?.let { put("mch", DuCodec.enc(it.groupValues[1], p)) }
             //     put("8tS", net?.linkDownstreamBandwidthKbps ?: 0)
             //     put("Hsz", net?.linkUpstreamBandwidthKbps ?: 0)
             // })
-            // put("7S2", allLinkInfo(ctx)) // libdu sub_b3b6c: {"0": {txo, Zne, MCN}, ...} for getAllNetworks()
+            // put("7S2", allLinkInfo(ctx, p)) // libdu sub_b3b6c: {"0": {txo, Zne, MCN}, ...} for getAllNetworks()
             // dhcpIp(ctx)?.let { put("wSK", it) }
             // activeNetworkInfo(ctx)?.let { ni -> put("zpA", ni.typeName); ni.subtypeName?.takeIf { it.isNotEmpty() }?.let { put("ozK", it) } }
             // put("J7w", mobileDataEnabled(ctx, tm))
 
             // hardware and telephony ids, mostly unreadable to apps on recent Android (P1J / AYk stand in for the MACs)
-            // putTwin("41j", wlanMac()); putTwin("nyx", ipLinkMac("wlan1")); putTwin("M96", ipLinkMac("p2p0"))
-            // putTwin("fM0", factoryMac())
-            // imei(tm)?.let { putTwin("p92", it) } // READ_PHONE_STATE, refused to apps from Android 10
-            // if (Build.VERSION.SDK_INT >= 26) runCatching { tm?.imei }.getOrNull()?.let { putTwin("3J5", it) } // same gate
+            // putTwin("41j", wlanMac(), p); putTwin("nyx", ipLinkMac("wlan1"), p); putTwin("M96", ipLinkMac("p2p0"), p)
+            // putTwin("fM0", factoryMac(), p)
+            // imei(tm)?.let { putTwin("p92", it, p) } // READ_PHONE_STATE, refused to apps from Android 10
+            // if (Build.VERSION.SDK_INT >= 26) runCatching { tm?.imei }.getOrNull()?.let { putTwin("3J5", it, p) } // same gate
             // dataNetworkType(tm)?.let { put("LkB", it) } // READ_PHONE_STATE
             // put("JPd", tm?.simOperator?.takeIf { it.isNotEmpty() } ?: "0")
             // put("bf7", tm?.networkOperator?.takeIf { it.isNotEmpty() } ?: "0")
             // put("4VP", tm?.simState ?: 0)
-            // settingsString(ctx, "oaid")?.let { put("IOe", DuCodec.enc(it)) }
-            // settingsGlobal(ctx, "pps_oaid")?.let { put("q6I", DuCodec.enc(it)) } // Huawei
+            // settingsString(ctx, "oaid")?.let { put("IOe", DuCodec.enc(it, p)) }
+            // settingsGlobal(ctx, "pps_oaid")?.let { put("q6I", DuCodec.enc(it, p)) } // Huawei
             // VENDOR_ID_FIELDS: a reimplementation has no Java side collecting them
 
             // environment checks, with the safe value of each
@@ -322,9 +327,9 @@ object DuClient {
             // put("5mZ", checkSslHook()) // 0
             // put("ZZA", if (listOf("tun0", "ppp0", "tap0").any { File("/sys/class/net/$it").exists() }) 1 else 0) // a VPN is up; 0
             // tracerPid()?.let { put("iZS", it) } // 0
-            // accessibilityServices(ctx)?.let { put("yzW", DuCodec.enc(it)) } // not sent (none enabled)
+            // accessibilityServices(ctx)?.let { put("yzW", DuCodec.enc(it, p)) } // not sent (none enabled)
             // userCaCerts()?.let { put("Q23", it) } // not sent (no user-installed CA)
-            // EMU_PROP_FIELDS.forEach { (key, p) -> prop(p, "").takeIf { it.isNotEmpty() }?.let { put(key, DuCodec.enc(it)) } } // not sent
+            // EMU_PROP_FIELDS.forEach { (key, name) -> prop(name, "").takeIf { it.isNotEmpty() }?.let { put(key, DuCodec.enc(it, p)) } } // not sent
 
             // app and SDK constants
             // put("EV2", HOST_VERSION_NAME)
@@ -375,20 +380,20 @@ object DuClient {
 
     // libdu sub_b19b4 (G8U): MYA = "MemTotal,MemFree" in kB (looked for in /proc/meminfo's first 5 lines),
     // H4S = "%f,%f" of /data's total and available GiB
-    private fun memAndStorage(): JSONObject = JSONObject().apply {
+    private fun memAndStorage(p: Int): JSONObject = JSONObject().apply {
         runCatching {
             val lines = File("/proc/meminfo").bufferedReader().useLines { it.take(5).toList() }
             fun kb(line: String, name: String) = Regex("""^$name: *(\d+) kB""").find(line)?.groupValues?.get(1)
             val i = lines.indexOfFirst { kb(it, "MemTotal") != null }
             if (i >= 0) {
                 val free = lines.drop(i + 1).firstNotNullOfOrNull { kb(it, "MemFree") }
-                put("MYA", DuCodec.enc(kb(lines[i], "MemTotal") + (free?.let { ",$it" } ?: "")))
+                put("MYA", DuCodec.enc(kb(lines[i], "MemTotal") + (free?.let { ",$it" } ?: ""), p))
             }
         }
         runCatching {
             val st = android.os.StatFs(android.os.Environment.getDataDirectory().path)
             val gib = (1L shl 30).toDouble()
-            put("H4S", DuCodec.enc("%f,%f".format(Locale.US, st.blockCountLong * st.blockSizeLong / gib, st.availableBlocksLong * st.blockSizeLong / gib)))
+            put("H4S", DuCodec.enc("%f,%f".format(Locale.US, st.blockCountLong * st.blockSizeLong / gib, st.availableBlocksLong * st.blockSizeLong / gib), p))
         }
     }
 
@@ -411,10 +416,10 @@ object DuClient {
     }
 
     // mode 10 of libdu's put (sub_f07fc), as foO / sfOo: the value with a char dropped, and "s" + key its checksum
-    private fun JSONObject.putTwin(key: String, value: String?) {
+    private fun JSONObject.putTwin(key: String, value: String?, p: Int) {
         if (value.isNullOrEmpty()) return
-        put(key, DuCodec.enc(DuCodec.dropChar(value)))
-        put("s$key", DuCodec.checksum(value))
+        put(key, DuCodec.enc(DuCodec.dropChar(value, p), p))
+        put("s$key", DuCodec.checksum(value, p))
     }
 
     // lower-case MD5 of a file's bytes (generic)
@@ -523,23 +528,23 @@ object DuClient {
 
     // libdu sub_b374c: a network's interface name (txo), addresses (Zne), DNS servers (MCN), all as List.toString(),
     // and for the active one its HTTP proxy host (9X9, raw) and port (dki)
-    private fun linkInfo(lp: android.net.LinkProperties, withProxy: Boolean) = JSONObject().apply {
-        lp.interfaceName?.let { put("txo", DuCodec.enc(it)) }
-        if (withProxy) lp.httpProxy?.let { p -> p.host?.let { put("9X9", it) }; if (p.port >= 1) put("dki", p.port) }
-        put("Zne", DuCodec.enc(lp.linkAddresses.toString()))
-        put("MCN", DuCodec.enc(lp.dnsServers.toString()))
+    private fun linkInfo(lp: android.net.LinkProperties, withProxy: Boolean, p: Int) = JSONObject().apply {
+        lp.interfaceName?.let { put("txo", DuCodec.enc(it, p)) }
+        if (withProxy) lp.httpProxy?.let { proxy -> proxy.host?.let { put("9X9", it) }; if (proxy.port >= 1) put("dki", proxy.port) }
+        put("Zne", DuCodec.enc(lp.linkAddresses.toString(), p))
+        put("MCN", DuCodec.enc(lp.dnsServers.toString(), p))
     }
 
     // libdu sub_b3fe0 (iYB): linkInfo of the active network
-    private fun activeLinkInfo(ctx: Context, withProxy: Boolean): JSONObject? = runCatching {
+    private fun activeLinkInfo(ctx: Context, withProxy: Boolean, p: Int): JSONObject? = runCatching {
         val cm = ctx.getSystemService(Context.CONNECTIVITY_SERVICE) as ConnectivityManager
-        cm.getLinkProperties(cm.activeNetwork)?.let { linkInfo(it, withProxy) }
+        cm.getLinkProperties(cm.activeNetwork)?.let { linkInfo(it, withProxy, p) }
     }.getOrNull()
 
     // libdu sub_b3b6c (7S2): linkInfo of every network, keyed by index
-    private fun allLinkInfo(ctx: Context): JSONObject? = runCatching {
+    private fun allLinkInfo(ctx: Context, p: Int): JSONObject? = runCatching {
         val cm = ctx.getSystemService(Context.CONNECTIVITY_SERVICE) as ConnectivityManager
-        JSONObject().apply { cm.allNetworks.forEachIndexed { i, n -> cm.getLinkProperties(n)?.let { put("$i", linkInfo(it, false)) } } }
+        JSONObject().apply { cm.allNetworks.forEachIndexed { i, n -> cm.getLinkProperties(n)?.let { put("$i", linkInfo(it, false, p)) } } }
     }.getOrNull()
 
     // libdu sub_c82e0 (iZS): TracerPid from /proc/self/status
@@ -778,24 +783,40 @@ internal object DuCodec {
     // Request/response stream cipher: repeating XOR with key-table entry 16.
     fun xor(data: ByteArray): ByteArray = ByteArray(data.size) { (data[it].toInt() xor KEY[it % KEY.size].toInt()).toByte() }
 
-    // libdu sub_df720: middle char first (odd length), then pairs s[n-1-i], s[m-1-i].
-    fun shuffle(s: String): String {
+    // libdu sub_14acbc: the encoding parameter, atoi of the time string's last 3 chars with '.' dropped
+    fun param(time: String): Int = time.takeLast(3).replace(".", "").toIntOrNull() ?: 0
+
+    // The four shuffles, picked by (p / 100) % 4; the first is sub_df720.
+    fun shuffle(s: String, p: Int): String {
         val n = s.length
         val m = n / 2
-        val sb = StringBuilder(n)
-        if (n % 2 == 1) sb.append(s[m])
-        for (i in 0 until m) sb.append(s[n - 1 - i]).append(s[m - 1 - i])
-        return sb.toString()
+        return buildString(n) {
+            when (p / 100 % 4) {
+                0 -> { if (n % 2 == 1) append(s[m]); for (i in 0 until m) append(s[n - 1 - i]).append(s[m - 1 - i]) }
+                1 -> { for (i in 0 until m) append(s[n - 1 - i]).append(s[i]); if (n % 2 == 1) append(s[m]) }
+                2 -> { for (i in n - 1 downTo 0 step 2) append(s[i]); for (i in n - 2 downTo 0 step 2) append(s[i]) }
+                else -> { for (i in 0 until n step 2) append(s[i]); for (i in 1 until n step 2) append(s[i]) }
+            }
+        }
     }
 
-    // Field value obfuscation: every char + 1, then shuffle.
-    fun enc(s: String): String = shuffle(s.map { it + 1 }.joinToString(""))
+    // Field value obfuscation: every char rotated by p % 100 % 57 + 1 within printable ASCII, then shuffled.
+    // shortcut: chars outside 0x20..0x7e are left as they are (never seen in a field), check libdu if one turns up
+    fun enc(s: String, p: Int): String {
+        val k = p % 100 % 57 + 1
+        return shuffle(s.map { if (it.code in 0x20..0x7e) ((it.code - 0x20 + k) % 95 + 0x20).toChar() else it }.joinToString(""), p)
+    }
 
-    // libdu sub_f043c with p = 0: drops one char (index n-1-p%10 when n > 9, else the last one).
-    fun dropChar(s: String): String = if (s.length <= 1) s else s.substring(0, s.length - 1)
+    // libdu sub_f043c: drops the char at n-1-p%10 when n > 9, else the last one.
+    fun dropChar(s: String, p: Int): String {
+        if (s.length <= 1) return s
+        val i = if (s.length > 9) s.length - 1 - p % 10 else s.length - 1
+        return s.removeRange(i, i + 1)
+    }
 
     // Companion of dropChar, stored under "s" + key: MD5(str(sum of chars + p%100/10))[:7]; "CFCD208" for 1-char input.
-    fun checksum(s: String): String = if (s.length <= 1) "CFCD208" else md5Upper(s.sumOf { it.code }.toString()).take(7)
+    fun checksum(s: String, p: Int): String =
+        if (s.length <= 1) "CFCD208" else md5Upper((s.sumOf { it.code } + p % 100 / 10).toString()).take(7)
 
     // P1J/AYk: SHA1(android_id) upper, sliced [1:7]:[13:19]:[7:13].
     fun fakeMac(sha1Upper: String): String =

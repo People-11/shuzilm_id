@@ -64,7 +64,8 @@ llvm-readelf -rW sample/libdu.so > tools/data/relocs.txt     # 或 aarch64-linux
 | `ucall.py` | 在 unicorn 里单独调用一个 libdu 函数，libc 和指定的内部函数用 Python 桩替代 | 见下 |
 | `leafstr.py` | 用 ucall 跑“叶子”采集函数并记录它的 libc 调用，读出栈上 XOR 拼出的路径和命令 | `python -I tools/python/leafstr.py 0xbc708` |
 | `test_fm0.py` | 把 `sub_4afb4`（fM0）和 DuClient 中的 Kotlin 移植放在 3000 组随机 MAC 上对比 | `python -I tools/python/test_fm0.py` → `cases 3000 mismatches 0` |
-| `unenc.py` | 解码 mode 2/3 字段值（编码见 [5.2](05-libdu-behavior.md#52-字段编码)） | `python -I tools/python/unenc.py b1mox` → `wlan0` |
+| `unenc.py` | 解码 P = 0 时的 mode 2/3 字段值（编码见 [5.2](05-libdu-behavior.md#52-字段编码)） | `python -I tools/python/unenc.py b1mox` → `wlan0` |
+| `duenc.py` | 按任意 `2cO` 编码 / 解码 mode 2/3/10 字段（含自检断言） | `python -I tools/python/duenc.py 1791105420.764024281 dec bb_p` → `WIFI` |
 | `catalog.py` | 由 payload 生成字段目录（`keys_catalog.tsv`） | `python -I tools/python/catalog.py docs/data/payload_*.json` |
 | `apkcert.py` | 从 APK 签名块（v2/v3）提取签名证书，harness 需要 | `python -I tools/python/apkcert.py app.apk tools/harness/coolapk_cert.der` |
 
@@ -145,6 +146,8 @@ harness **不联网**。libdu 的 HTTP 请求走 Java 的 `HttpURLConnection`，
 | `FUNCTEST=0xoff:input,...` | 直接调用 `fn(char* buf, len)` 形式的函数并打印结果 |
 | `KEYTABLE=1` | 打印 libdu 内置的密钥表 |
 | `KEEPFS=1` | 不清空模拟文件系统 |
+| `NS3=281` | 把传给 `sub_14b500` 的 `2cO` 末三位改成指定值（unidbg 时钟只有毫秒精度，末三位总是 000），用来观察字段编码参数 P 的影响 |
+| `NSEC=42` | 把 `2cO` 的整个纳秒部分换成指定值（libdu 不补零，短于 3 位时末三位会带上 `.` 和秒的末位） |
 | `IDLE` / `MAXRUN` | 看门狗：日志停止增长 IDLE 秒（默认 30），或总运行时间超过 MAXRUN 秒（默认 600）就退出 |
 
 ### 复现“首次上报 + 后续上报”

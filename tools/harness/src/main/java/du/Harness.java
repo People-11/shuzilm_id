@@ -117,6 +117,23 @@ public class Harness {
                 @Override public void detach() { }
             }, base + cs, base + cs + 4, null);
         }
+        // NS3=281 : overwrite the last 3 digits of the 2cO time string as sub_14b500 receives it (they pick the field-encoding parameter)
+        // NSEC=42 : replace the whole nanosecond part instead (libdu prints it unpadded, so short values move the '.')
+        if (System.getenv("NS3") != null || System.getenv("NSEC") != null) {
+            byte[] ns3 = System.getenv().getOrDefault("NS3", "").getBytes(StandardCharsets.ISO_8859_1);
+            String nsec = System.getenv("NSEC");
+            emu.getBackend().hook_add_new(new com.github.unidbg.arm.backend.CodeHook() {
+                @Override public void hook(com.github.unidbg.arm.backend.Backend be, long address, int size, Object user) {
+                    long p = be.reg_read(unicorn.Arm64Const.UC_ARM64_REG_X0).longValue();
+                    String s = Emu.cstr(be, p);
+                    if (nsec != null) be.mem_write(p, (s.substring(0, s.indexOf('.') + 1) + nsec + "\0").getBytes(StandardCharsets.ISO_8859_1));
+                    else if (s.length() >= 3) be.mem_write(p + s.length() - 3, ns3);
+                    trace.println("NS3 2cO " + s + " -> " + Emu.cstr(be, p));
+                }
+                @Override public void onAttach(com.github.unidbg.arm.backend.UnHook u) { }
+                @Override public void detach() { }
+            }, base + 0x14b500, base + 0x14b500, null);
+        }
         if (System.getenv("WATCH") != null) for (String o : System.getenv("WATCH").split(",")) {
             long addr = Long.decode(o);
             emu.getBackend().hook_add_new(new com.github.unidbg.arm.backend.WriteHook() {
